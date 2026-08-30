@@ -5,13 +5,17 @@ import {defineConfig, loadEnv} from 'vite';
 
 export default defineConfig(({mode}) => {
   const env = loadEnv(mode, '.', '');
+  
+  // GitHub Pages deploy uchun API key'ni build'dan olib tashlash
+  const isProduction = mode === 'production';
+  
   return {
     // Local: http://localhost:3000/  |  GitHub Pages build: set VITE_BASE=/the-delegation/
     base: process.env.VITE_BASE || '/',
     plugins: [react(), tailwindcss()],
     define: {
       'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY || ''),
-      'process.env.OPENAI_API_KEY': JSON.stringify(env.OPENAI_API_KEY || ''),
+      'process.env.OPENAI_API_KEY': JSON.stringify(isProduction ? '' : env.OPENAI_API_KEY || ''),
       'process.env.OPENAI_BASE_URL': JSON.stringify(env.OPENAI_BASE_URL || 'https://api.openai.com/v1'),
       'process.env.OPENAI_MODEL': JSON.stringify(env.OPENAI_MODEL || 'gpt-4o-mini'),
       'process.env.OPENAI_EMBED_MODEL': JSON.stringify(env.OPENAI_EMBED_MODEL || 'text-embedding-3-small'),
