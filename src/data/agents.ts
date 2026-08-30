@@ -3,9 +3,10 @@ import { DEFAULT_MODELS } from '../core/llm/constants';
 
 export const USER_ID = 'user';
 export const USER_NAME = 'User';
-export const MAX_AGENTS = 5;
+/** Raised from 5 → 8 to support deeper nested multi-agent teams (Ikki Miya). */
+export const MAX_AGENTS = 8;
 export { USER_COLOR };
-export const DEFAULT_AGENTIC_SET_ID = 'single-agent';
+export const DEFAULT_AGENTIC_SET_ID = 'ikki-miya';
 export interface AgentNode {
   id: string;
   index: number;
@@ -37,6 +38,99 @@ export interface AgenticSystem {
 }
 
 export const AGENTIC_SETS: AgenticSystem[] = [
+  {
+    id: 'ikki-miya',
+    teamName: 'Ikki Miya',
+    teamType: 'Startup Lab',
+    teamDescription:
+      'O‘zbekiston startaplari uchun murakkab multi-agent ofis: mahsulot, o‘sish, texnika va moliya birgalikda ishlaydi. UZ/RU/EN tillarida javob beradi.',
+    color: '#7C3AED',
+    outputType: 'text',
+    outputModel: DEFAULT_MODELS.text,
+    outputAutoApprove: true,
+    user: { index: 0, model: 'Human', position: { x: 0, y: 0 } },
+    leadAgent: {
+      id: 'ikki-ceo',
+      index: 1,
+      name: 'Bosh direktor',
+      description:
+        'Ikki Miya laboratoriyasini boshqaradi. Brifni aniqlaydi, Product/Growth/Tech boʻyicha vazifa beradi, peer review talab qiladi va yakuniy rejani topshiradi. Foydalanuvchi oʻzbekcha yozsa — oʻzbekcha javob beradi.',
+      color: '#7C3AED',
+      model: DEFAULT_MODELS.text,
+      humanInTheLoop: true,
+      position: { x: 0, y: 130 },
+      subagents: [
+        {
+          id: 'ikki-product',
+          index: 2,
+          name: 'Mahsulot rahbari',
+          description:
+            'Muammo, user story, MVP doirasi va Markaziy Osiyo bozori uchun ustuvorliklarni belgilaydi.',
+          color: '#2563EB',
+          model: DEFAULT_MODELS.text,
+          humanInTheLoop: true,
+          position: { x: -360, y: 280 },
+          subagents: [
+            {
+              id: 'ikki-analyst',
+              index: 5,
+              name: 'Bozor tahlilchisi',
+              description:
+                'Raqobatchilar, TAM/SAM, narx va mahalliy foydalanuvchi xulqini tadqiq qiladi. Natijani share_insight orqali ulashadi.',
+              color: '#60A5FA',
+              model: DEFAULT_MODELS.text,
+              position: { x: -360, y: 430 }
+            }
+          ]
+        },
+        {
+          id: 'ikki-growth',
+          index: 3,
+          name: 'Oʻsish rahbari',
+          description:
+            'Jalb qilish, ushlab qolish va go-to-market strategiyasini boshqaradi. Kontent va kanal testlarini muvofiqlashtiradi.',
+          color: '#DB2777',
+          model: DEFAULT_MODELS.text,
+          position: { x: 0, y: 280 },
+          subagents: [
+            {
+              id: 'ikki-content',
+              index: 6,
+              name: 'Kontent strateg',
+              description:
+                'Hook, landing matn va Telegram/Instagram skriptlarini UZ auditoriya uchun yozadi.',
+              color: '#F472B6',
+              model: DEFAULT_MODELS.text,
+              humanInTheLoop: true,
+              position: { x: 0, y: 430 }
+            }
+          ]
+        },
+        {
+          id: 'ikki-tech',
+          index: 4,
+          name: 'Texnika rahbari',
+          description:
+            'Arxitektura, milestone va stackni belgilaydi. Topshirishdan oldin moliyadan peer review soʻraydi.',
+          color: '#059669',
+          model: DEFAULT_MODELS.text,
+          position: { x: 360, y: 280 },
+          subagents: [
+            {
+              id: 'ikki-finance',
+              index: 7,
+              name: 'Moliya maslahatchisi',
+              description:
+                'Unit economics, burn, narxlash va risklarni hisoblaydi. Texnik rejani xarajat jihatdan tekshiradi.',
+              color: '#34D399',
+              model: DEFAULT_MODELS.text,
+              position: { x: 360, y: 430 }
+            }
+          ]
+        }
+      ]
+    }
+  },
   {
     id: 'unboring-net',
     teamName: 'unboring.net',

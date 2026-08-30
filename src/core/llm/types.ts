@@ -34,6 +34,8 @@ export interface LLMConfig {
   apiKey?: string;
   baseUrl?: string;
   model: string;
+  provider?: 'openai' | 'gemini';
+  embedModel?: string;
 }
 
 export interface LLMRequestDetails {

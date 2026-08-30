@@ -7,6 +7,7 @@ import { useCoreStore } from '../integration/store/coreStore';
 import { useTeamStore, useActiveTeam } from '../integration/store/teamStore';
 import { useSceneManager } from '../simulation/SceneContext';
 import { USER_COLOR } from '../theme/brand';
+import { uz } from '../i18n/uz';
 import ResetModal from './ResetModal';
 import PricingModal from './PricingModal';
 
@@ -47,7 +48,7 @@ const ProjectView: React.FC = () => {
     <div className="flex flex-col h-full overflow-y-auto p-6 bg-white/50">
       <div className="mb-6">
         <div className="flex items-center justify-between mb-2">
-          <h2 className="text-xl font-black text-darkDelegation leading-tight">Project Info</h2>
+          <h2 className="text-xl font-black text-darkDelegation leading-tight">{uz.projectInfo}</h2>
           <div className="flex items-center gap-2">
             <div
               className="px-2.5 py-1 rounded-xl text-[9px] font-black uppercase tracking-widest flex items-center gap-1.5 transition-colors border border-transparent"
@@ -58,7 +59,7 @@ const ProjectView: React.FC = () => {
               }}
             >
               <div className={`w-1.5 h-1.5 rounded-full ${phase === 'working' ? 'bg-white animate-pulse' : 'bg-white opacity-40'}`} />
-              {phase === 'idle' ? 'Ready to Start' : phase}
+              {phase === 'idle' ? uz.readyToStart : phase === 'working' ? 'Ishlamoqda' : phase === 'done' ? uz.done : phase}
             </div>
           </div>
         </div>
@@ -77,7 +78,7 @@ const ProjectView: React.FC = () => {
               }`}
           >
             <RefreshCcw size={14} strokeWidth={3} className="transition-transform group-hover:rotate-180 duration-500" />
-            <span className="text-[10px] font-black uppercase tracking-widest">Start New Project</span>
+            <span className="text-[10px] font-black uppercase tracking-widest">Yangi loyiha</span>
           </button>
         </div>
       )}
@@ -85,7 +86,7 @@ const ProjectView: React.FC = () => {
       {/* Brief */}
       <div className="mb-10">
         <div className="flex items-center gap-2 mb-4">
-          <p className="text-[10px] font-black uppercase tracking-widest text-zinc-400">User Brief</p>
+          <p className="text-[10px] font-black uppercase tracking-widest text-zinc-400">{uz.userBrief}</p>
           <div className="h-px flex-1 bg-zinc-100" />
         </div>
         {userBrief ? (
@@ -110,7 +111,7 @@ const ProjectView: React.FC = () => {
             )}
           </div>
         ) : (
-          <p className="text-xs text-zinc-400 italic">No active brief. Talk to the Lead Agent to define your project.</p>
+          <p className="text-xs text-zinc-400 italic">{uz.noBrief}</p>
         )}
       </div>
 
@@ -118,7 +119,7 @@ const ProjectView: React.FC = () => {
       <div className="mb-8">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2 flex-1">
-            <p className="text-[10px] font-black uppercase tracking-widest text-zinc-400">Token Usage</p>
+            <p className="text-[10px] font-black uppercase tracking-widest text-zinc-400">{uz.tokenUsage}</p>
             <div className="h-px flex-1 bg-zinc-100" />
           </div>
           <button
@@ -126,7 +127,7 @@ const ProjectView: React.FC = () => {
             className="flex items-center gap-2 px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 border border-emerald-100 hover:border-emerald-200 rounded-lg transition-all active:scale-95 group ml-4 cursor-pointer"
           >
             <span className="text-[10px] font-black uppercase tracking-tight text-emerald-600">
-              Total Est. ${useCoreStore.getState().totalEstimatedCost.toFixed(3)}
+              {uz.totalEst} ${useCoreStore.getState().totalEstimatedCost.toFixed(3)}
             </span>
             <Info size={11} className="text-emerald-500 group-hover:text-emerald-600" />
           </button>

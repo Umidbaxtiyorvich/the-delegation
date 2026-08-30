@@ -8,10 +8,10 @@ import { useUiStore } from '../integration/store/uiStore'
 import DeleteTaskModal from './DeleteTaskModal'
 
 const COLUMNS: { status: TaskStatus; label: string }[] = [
-  { status: 'scheduled', label: 'Scheduled' },
-  { status: 'on_hold', label: 'On Hold' },
-  { status: 'in_progress', label: 'In Progress' },
-  { status: 'done', label: 'Done' },
+  { status: 'scheduled', label: 'Rejada' },
+  { status: 'on_hold', label: 'Kutishda' },
+  { status: 'in_progress', label: 'Jarayonda' },
+  { status: 'done', label: 'Tugadi' },
 ]
 
 interface KanbanPanelProps {

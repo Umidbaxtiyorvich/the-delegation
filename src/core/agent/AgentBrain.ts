@@ -1,5 +1,6 @@
 import { LLMMessage } from '../llm/types';
-import { GeminiProvider } from '../llm/providers/GeminiProvider';
+import { OpenAIProvider } from '../llm/providers/OpenAIProvider';
+import { DEFAULT_OPENAI_BASE_URL } from '../llm/constants';
 import { useUiStore } from '../../integration/store/uiStore';
 import { useCoreStore } from '../../integration/store/coreStore';
 import { useTeamStore } from '../../integration/store/teamStore';
@@ -22,6 +23,15 @@ export interface ThinkOptions {
   silent?: boolean;
 }
 
+function createProvider() {
+  const llmConfig = useUiStore.getState().llmConfig;
+  if (!llmConfig.apiKey) throw new Error('OpenAI API kaliti kerak');
+  return new OpenAIProvider(
+    llmConfig.apiKey,
+    llmConfig.baseUrl || DEFAULT_OPENAI_BASE_URL
+  );
+}
+
 export class AgentBrain {
   private history: LLMMessage[] = [];
   public isThinking: boolean = false;
@@ -38,8 +48,8 @@ export class AgentBrain {
       this.refreshFromStore();
       const core = useCoreStore.getState();
       const llmConfig = useUiStore.getState().llmConfig;
-      if (!llmConfig.apiKey) throw new Error('Gemini API key is required');
-      const provider = new GeminiProvider(llmConfig.apiKey);
+      if (!llmConfig.apiKey) throw new Error('OpenAI API kaliti kerak');
+      const provider = createProvider();
       const model = this.host.data.model || llmConfig.model;
       const teamId = useTeamStore.getState().selectedAgentSetId;
       const activeTeam = useTeamStore.getState().customSystems.find(s => s.id === teamId)
@@ -128,12 +138,12 @@ export class AgentBrain {
       const isMalformed = response.finishReason === 'MALFORMED_FUNCTION_CALL';
 
       if (isMalformed) {
-        finalContent = 'ERROR: Malformed function call. Please try again.';
+        finalContent = 'XATO: Notoʻgʻri funksiya chaqiruvi. Qayta urinib koʻring.';
         console.warn(`[AgentBrain:${this.host.data.name}] Malformed function call detected.`);
       } else if (hasToolCallsOnly && !isInternalTrigger) {
         finalContent = isBrief
-          ? "Project brief set. Let's begin!"
-          : 'Working on it...';
+          ? 'Loyiha brifi belgilandi. Boshlaymiz!'
+          : 'Ishlayapman...';
       } else if (!text && toolCalls.length === 0 && !isInternalTrigger) {
         finalContent = '...';
       }
@@ -155,13 +165,22 @@ export class AgentBrain {
       });
       this.syncToStore();
 
-      // 7. Process Actions (Tools)
-      for (const tc of toolCalls) {
+      // 7. Process Actions (Tools) + OpenAI tool-result messages
+      for (let i = 0; i < toolCalls.length; i++) {
+        const tc = toolCalls[i];
         const handled = ToolRegistry.process(this.host as any, tc);
+        const matching = response.tool_calls?.[i];
+        this.history.push({
+          role: 'tool',
+          name: matching?.id || tc.name,
+          content: handled ? `OK: ${tc.name}` : `FAILED: ${tc.name}`,
+          metadata: { internal: true },
+        });
         if (tc.name === 'deliver_project' && handled) {
           this.handleFinalAssetGeneration(tc.args.output);
         }
       }
+      this.syncToStore();
 
       return { text, toolCalls };
     } catch (error) {
@@ -177,12 +196,12 @@ export class AgentBrain {
 
   /** Autonomous Intent: Start the project strategy. */
   public async spark() {
-    return this.think('Start the project by proposing initial tasks.', { silent: true });
+    return this.think('Loyihani boshlang: dastlabki vazifalarni taklif qiling.', { silent: true });
   }
 
   /** Autonomous Intent: Work on a specific task. */
   public async executeTask(taskId: string) {
-    return this.think(`Proceed with task: ${taskId}`, { silent: true });
+    return this.think(`Vazifani bajaring: ${taskId}`, { silent: true });
   }
 
   /** Autonomous Intent: Finalize and deliver the project results. */
@@ -235,8 +254,8 @@ export class AgentBrain {
 
     try {
       const llmConfig = useUiStore.getState().llmConfig;
-      if (!llmConfig.apiKey) throw new Error('Gemini API key is required');
-      const provider = new GeminiProvider(llmConfig.apiKey) as any;
+      if (!llmConfig.apiKey) throw new Error('OpenAI API kaliti kerak');
+      const provider = createProvider() as any;
       const model = options.model || activeTeam.outputModel || llmConfig.model;
 
       core.addLogEntry({

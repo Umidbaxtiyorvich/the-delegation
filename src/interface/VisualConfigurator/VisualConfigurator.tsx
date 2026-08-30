@@ -33,7 +33,7 @@ const InternalHeader = ({ onClose, system }: { onClose: () => void, system: any 
   <div className="h-14 border-b border-zinc-100 bg-white flex items-center justify-between px-6 z-50 shrink-0">
     <div className="flex items-center gap-2">
       <Settings size={18} className="text-darkDelegation" strokeWidth={2} />
-      <h2 className="text-xs font-black text-darkDelegation uppercase tracking-[0.2em] ml-2">Manage Teams</h2>
+      <h2 className="text-xs font-black text-darkDelegation uppercase tracking-[0.2em] ml-2">Jamoalarni boshqarish</h2>
 
       <div className="ml-4">
         <SystemDebugOverlay system={system} />

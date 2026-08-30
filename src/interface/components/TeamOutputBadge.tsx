@@ -41,7 +41,7 @@ export const TeamOutputBadge: React.FC<TeamOutputBadgeProps> = ({ system, classN
                 }} 
               />
               <span className="text-[7px] font-bold text-zinc-300 uppercase tracking-tighter leading-none whitespace-nowrap">
-                {system.outputAutoApprove ? 'AUTO APPROVE' : 'MANUAL REVIEW'}
+                {system.outputAutoApprove ? 'AVTO TASDIQ' : 'QOʻLDA TEKSHIRUV'}
               </span>
             </div>
           </InfoTooltip>

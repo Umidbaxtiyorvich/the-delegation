@@ -2,12 +2,39 @@ import { create } from 'zustand';
 import { getAllAgents } from '../../data/agents';
 import { AgentState, CharacterState } from '../../types';
 import { useTeamStore, getActiveAgentSet } from './teamStore';
-import { DEFAULT_MODELS } from '../../core/llm/constants';
+import { DEFAULT_MODELS, DEFAULT_OPENAI_BASE_URL } from '../../core/llm/constants';
+
+function loadLlmConfig() {
+  try {
+    const saved = localStorage.getItem('byok-config');
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (parsed?.apiKey) {
+        return {
+          ...parsed,
+          provider: 'openai' as const,
+          baseUrl: parsed.baseUrl || (process.env.OPENAI_BASE_URL as string) || DEFAULT_OPENAI_BASE_URL,
+          model: parsed.model || (process.env.OPENAI_MODEL as string) || DEFAULT_MODELS.text,
+          embedModel: parsed.embedModel || (process.env.OPENAI_EMBED_MODEL as string) || DEFAULT_MODELS.embed,
+        };
+      }
+    }
+  } catch { /* ignore */ }
+
+  const envKey = (process.env.OPENAI_API_KEY as string) || '';
+  return {
+    apiKey: envKey,
+    baseUrl: (process.env.OPENAI_BASE_URL as string) || DEFAULT_OPENAI_BASE_URL,
+    model: (process.env.OPENAI_MODEL as string) || DEFAULT_MODELS.text,
+    embedModel: (process.env.OPENAI_EMBED_MODEL as string) || DEFAULT_MODELS.embed,
+    provider: 'openai' as const,
+  };
+}
 
 export const useUiStore = create<CharacterState>()(
   (set) => ({
     isThinking: false,
-    instanceCount: getAllAgents(getActiveAgentSet()).length + 1, // +1 for user
+    instanceCount: getAllAgents(getActiveAgentSet()).length + 1,
 
     selectedNpcIndex: null,
     selectedPosition: null,
@@ -33,16 +60,7 @@ export const useUiStore = create<CharacterState>()(
     activeAuditTaskId: null,
     setActiveAuditTaskId: (taskId: string | null) => set({ activeAuditTaskId: taskId }),
 
-    llmConfig: (() => {
-      try {
-        const saved = localStorage.getItem('byok-config');
-        if (saved) return JSON.parse(saved);
-      } catch { }
-      return {
-        apiKey: '',
-        model: DEFAULT_MODELS.text
-      };
-    })(),
+    llmConfig: loadLlmConfig(),
 
     setThinking: (isThinking: boolean) => set({ isThinking }),
     setIsTyping: (isTyping: boolean) => set({ isTyping }),
@@ -67,8 +85,8 @@ export const useUiStore = create<CharacterState>()(
       hoveredNpcIndex: null,
     }),
     setLlmConfig: (config) => set((s) => ({ llmConfig: { ...s.llmConfig, ...config } })),
-    setChatting: (isChatting: boolean) => set((s) => ({ 
-      isChatting, 
+    setChatting: (isChatting: boolean) => set((s) => ({
+      isChatting,
       isTyping: isChatting ? s.isTyping : false,
       isThinking: isChatting ? s.isThinking : false,
       chatMessages: isChatting ? s.chatMessages : []
@@ -76,7 +94,6 @@ export const useUiStore = create<CharacterState>()(
   })
 );
 
-// Keep instanceCount in sync whenever the active agent set changes
 useTeamStore.subscribe((state, prevState) => {
   if (state.selectedAgentSetId !== prevState.selectedAgentSetId) {
     const system = getActiveAgentSet();

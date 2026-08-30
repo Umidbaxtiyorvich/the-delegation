@@ -3,6 +3,8 @@ import { setUserBrief } from './tools/setUserBrief';
 import { proposeTask } from './tools/proposeTask';
 import { completeTask } from './tools/completeTask';
 import { deliverProject } from './tools/deliverProject';
+import { shareInsight } from './tools/shareInsight';
+import { requestPeerReview } from './tools/requestPeerReview';
 
 export interface ToolCall {
   name: string;
@@ -35,6 +37,10 @@ export class ToolRegistry {
         return completeTask(agent, args);
       case 'deliver_project':
         return deliverProject(agent, args);
+      case 'share_insight':
+        return shareInsight(agent, args);
+      case 'request_peer_review':
+        return requestPeerReview(agent, args);
       default:
         console.warn(`[ToolRegistry] Unknown tool: ${name}`);
         return false;
@@ -100,6 +106,44 @@ export class ToolRegistry {
                 output: { type: 'string', description: 'Task result in Markdown (e.g. code blocks, text, or research).' }
               },
               required: ['taskId', 'output']
+            }
+          }
+        },
+        {
+          type: 'function',
+          function: {
+            name: 'share_insight',
+            description:
+              'Publish a durable insight to the shared team knowledge base so other agents can reuse it.',
+            parameters: {
+              type: 'object',
+              properties: {
+                topic: { type: 'string', description: 'Short topic title' },
+                insight: { type: 'string', description: 'The reusable finding or decision' },
+                tags: {
+                  type: 'array',
+                  items: { type: 'string' },
+                  description: 'Optional tags e.g. market, pricing, risk'
+                }
+              },
+              required: ['topic', 'insight']
+            }
+          }
+        },
+        {
+          type: 'function',
+          function: {
+            name: 'request_peer_review',
+            description:
+              'Ask another agent to peer-review a task output. Creates a linked review task.',
+            parameters: {
+              type: 'object',
+              properties: {
+                taskId: { type: 'string' },
+                reviewerAgentId: { type: 'integer', description: 'Agent index of the reviewer' },
+                focus: { type: 'string', description: 'What the reviewer should focus on' }
+              },
+              required: ['taskId', 'reviewerAgentId', 'focus']
             }
           }
         },

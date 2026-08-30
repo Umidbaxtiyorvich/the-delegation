@@ -38,6 +38,16 @@ export interface ActionLogEntry {
   taskId?: string
 }
 
+export interface SharedInsight {
+  id: string
+  topic: string
+  insight: string
+  tags: string[]
+  authorIndex: number
+  authorName: string
+  createdAt: number
+}
+
 export interface DebugLogEntryBase {
   id: string
   timestamp: number
@@ -89,6 +99,9 @@ interface CoreState {
   // ── Tasks ────────────────────────────────────────────────────
   tasks: Task[]
 
+  // ── Shared team knowledge (cross-agent memory) ───────────────
+  sharedKnowledge: SharedInsight[]
+
   // ── Log ──────────────────────────────────────────────────────
   actionLog: ActionLogEntry[]
   debugLog: DebugLogEntry[]
@@ -128,6 +141,10 @@ interface CoreState {
   setTaskOutput: (taskId: string, output: string) => void;
   approveTask: (taskId: string) => void;
   rejectTask: (taskId: string, comments: string) => void;
+
+  // ── Actions — Shared knowledge ────────────────────────────────
+  addSharedInsight: (entry: Omit<SharedInsight, 'id' | 'createdAt'>) => SharedInsight;
+  clearSharedKnowledge: () => void;
 
   // ── Actions — Log ─────────────────────────────────────────────
   addLogEntry: (entry: Omit<ActionLogEntry, 'id' | 'timestamp'>) => void;
@@ -173,6 +190,7 @@ export const useCoreStore = create<CoreState>()(
       pendingOutputPrompt: '',
       pendingOutputParams: {},
       tasks: [],
+      sharedKnowledge: [],
       actionLog: [],
       debugLog: [],
       agentHistories: {},
@@ -192,6 +210,7 @@ export const useCoreStore = create<CoreState>()(
         phase: 'idle',
         finalOutput: null,
         tasks: [],
+        sharedKnowledge: [],
         actionLog: [],
         debugLog: [],
         agentHistories: {},
@@ -239,6 +258,20 @@ export const useCoreStore = create<CoreState>()(
         set((s) => ({ tasks: [...s.tasks, newTask] }))
         return newTask
       },
+
+      addSharedInsight: (entry) => {
+        const insight: SharedInsight = {
+          ...entry,
+          id: `insight_${uid()}`,
+          createdAt: Date.now(),
+        };
+        set((s) => ({
+          sharedKnowledge: [...s.sharedKnowledge, insight].slice(-40),
+        }));
+        return insight;
+      },
+
+      clearSharedKnowledge: () => set({ sharedKnowledge: [] }),
 
       removeTask: (taskId) =>
         set((s) => {

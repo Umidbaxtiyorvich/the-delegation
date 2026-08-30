@@ -1,30 +1,30 @@
 export const DEFAULT_MODELS = {
-  text: 'gemini-3-flash-preview',
-  image: 'gemini-3.1-flash-image-preview',
-  music: 'lyria-3-clip-preview',
-  video: 'veo-3.1-lite-generate-preview'
+  text: 'gpt-4o-mini',
+  image: 'dall-e-3',
+  music: 'gpt-4o-mini',
+  video: 'gpt-4o-mini',
+  embed: 'text-embedding-3-small',
 } as const;
 
 export const AVAILABLE_MODELS = {
   text: [
-    'gemini-3-flash-preview',
-    'gemini-3.1-pro-preview',
-    'gemini-3.1-flash-lite-preview'
+    'gpt-4o-mini',
+    'gpt-4o',
+    'gpt-4.1-mini',
+    'gpt-4.1',
   ],
   image: [
-    'gemini-3.1-flash-image-preview',
-    'gemini-3-pro-image-preview',
-    'gemini-2.5-flash-image'
+    'dall-e-3',
+    'gpt-image-1',
   ],
   music: [
-    'lyria-3-clip-preview',
-    'lyria-3-pro-preview'
+    'gpt-4o-mini',
   ],
   video: [
-    'veo-3.1-lite-generate-preview',
-    'veo-3.1-fast-generate-preview',
-    'veo-3.1-generate-preview'
-  ]
+    'gpt-4o-mini',
+  ],
 } as const;
 
 export type ModelType = keyof typeof AVAILABLE_MODELS;
+
+export const DEFAULT_OPENAI_BASE_URL = 'https://api.openai.com/v1';

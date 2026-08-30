@@ -1,7 +1,8 @@
 import { Eye, EyeOff, Trash2, X } from 'lucide-react';
 import React, { useState } from 'react';
 import { useUiStore } from '../integration/store/uiStore';
-import { DEFAULT_MODELS } from '../core/llm/constants';
+import { DEFAULT_MODELS, DEFAULT_OPENAI_BASE_URL } from '../core/llm/constants';
+import { uz } from '../i18n/uz';
 
 interface BYOKModalProps {
   onClose: () => void;
@@ -13,13 +14,18 @@ const BYOKModal: React.FC<BYOKModalProps> = ({ onClose }) => {
   const { llmConfig, setLlmConfig, byokError } = useUiStore();
 
   const [apiKey, setApiKey] = useState<string>(llmConfig.apiKey || '');
+  const [baseUrl, setBaseUrl] = useState<string>(llmConfig.baseUrl || DEFAULT_OPENAI_BASE_URL);
+  const [model, setModel] = useState<string>(llmConfig.model || DEFAULT_MODELS.text);
   const [showKey, setShowKey] = useState(false);
   const [isErrorExpanded, setIsErrorExpanded] = useState(false);
 
   const handleSave = () => {
     const config = {
       apiKey: apiKey.trim(),
-      model: llmConfig.model || DEFAULT_MODELS.text,
+      baseUrl: baseUrl.trim() || DEFAULT_OPENAI_BASE_URL,
+      model: model.trim() || DEFAULT_MODELS.text,
+      embedModel: llmConfig.embedModel || DEFAULT_MODELS.embed,
+      provider: 'openai' as const,
     };
     setLlmConfig(config);
     try {
@@ -33,7 +39,10 @@ const BYOKModal: React.FC<BYOKModalProps> = ({ onClose }) => {
   const handleClear = () => {
     const emptyConfig = {
       apiKey: '',
-      model: llmConfig.model || DEFAULT_MODELS.text,
+      baseUrl: DEFAULT_OPENAI_BASE_URL,
+      model: DEFAULT_MODELS.text,
+      embedModel: DEFAULT_MODELS.embed,
+      provider: 'openai' as const,
     };
     setApiKey('');
     setLlmConfig(emptyConfig);
@@ -55,7 +64,6 @@ const BYOKModal: React.FC<BYOKModalProps> = ({ onClose }) => {
       <div
         className="relative w-full max-w-md bg-white rounded-[40px] shadow-[0_32px_64px_-12px_rgba(0,0,0,0.1)] p-8 md:p-10 border border-zinc-100"
       >
-        {/* Close button */}
         <button
           onClick={onClose}
           className="absolute top-6 right-6 text-zinc-300 hover:text-zinc-600 transition-colors cursor-pointer"
@@ -64,29 +72,27 @@ const BYOKModal: React.FC<BYOKModalProps> = ({ onClose }) => {
         </button>
 
         <div className="max-w-md mx-auto">
-          {/* Header */}
           <div className="mb-6">
             <h2 className="text-3xl font-black text-darkDelegation tracking-tight mb-2">
-              Gemini API Key
+              {uz.openaiTitle}
             </h2>
             <a
-              href="https://aistudio.google.com/app/apikey"
+              href="https://platform.openai.com/api-keys"
               target="_blank"
               rel="noopener"
               className="group inline-flex items-center gap-2 px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 border border-emerald-100 hover:border-emerald-200 rounded-full transition-all duration-200 mb-3"
             >
-              <span className="text-[10px] font-black uppercase tracking-wider text-emerald-600">Get Gemini API Key</span>
+              <span className="text-[10px] font-black uppercase tracking-wider text-emerald-600">{uz.getApiKey}</span>
               <svg className="text-emerald-500 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
                 <line x1="7" y1="17" x2="17" y2="7"></line>
                 <polyline points="7 7 17 7 17 17"></polyline>
               </svg>
             </a>
-            <p className="text-zinc-400 text-sm font-medium leading-relaxed max-w-[240px]">
-              Your key is stored locally and never leaves your browser.
+            <p className="text-zinc-400 text-sm font-medium leading-relaxed max-w-[280px]">
+              {uz.keyHint}
             </p>
           </div>
 
-          {/* Error Message */}
           {byokError && (() => {
             const isLongError = byokError.length > 120;
             const displayError = isErrorExpanded || !isLongError ? byokError : byokError.slice(0, 110) + '...';
@@ -97,7 +103,7 @@ const BYOKModal: React.FC<BYOKModalProps> = ({ onClose }) => {
                   <X size={14} strokeWidth={3} className="rotate-45" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-[10px] font-black uppercase tracking-wider text-red-500 mb-0.5">API Error</p>
+                  <p className="text-[10px] font-black uppercase tracking-wider text-red-500 mb-0.5">{uz.apiError}</p>
                   <div className={`${isErrorExpanded ? 'max-h-48' : 'max-h-24'} overflow-y-auto pr-1`}>
                     <p className="text-[11px] font-medium text-red-600 leading-tight break-words whitespace-pre-wrap">
                       {displayError}
@@ -107,7 +113,7 @@ const BYOKModal: React.FC<BYOKModalProps> = ({ onClose }) => {
                         onClick={() => setIsErrorExpanded(!isErrorExpanded)}
                         className="mt-1 text-[9px] font-black uppercase tracking-widest text-red-500 hover:text-red-700 transition-colors cursor-pointer"
                       >
-                        {isErrorExpanded ? 'Show Less' : 'Show More'}
+                        {isErrorExpanded ? 'Kamroq' : 'Koʻproq'}
                       </button>
                     )}
                   </div>
@@ -116,18 +122,16 @@ const BYOKModal: React.FC<BYOKModalProps> = ({ onClose }) => {
             );
           })()}
 
-
-          {/* API Key input */}
-          <div className="mb-10">
-            <label className="block text-[11px] font-black uppercase tracking-[0.2em] text-zinc-300 mb-4 ml-1">
-              API Key
+          <div className="mb-4">
+            <label className="block text-[11px] font-black uppercase tracking-[0.2em] text-zinc-300 mb-3 ml-1">
+              {uz.apiKey}
             </label>
             <div className="relative group">
               <input
                 type={showKey ? 'text' : 'password'}
                 value={apiKey}
                 onChange={(e) => setApiKey(e.target.value)}
-                placeholder="Paste your API key here"
+                placeholder={uz.pasteKey}
                 className="w-full bg-zinc-50 border border-zinc-100 rounded-3xl px-6 py-4 pr-14 text-sm text-darkDelegation font-mono placeholder:text-zinc-300 placeholder:font-sans focus:outline-none focus:border-zinc-200 transition-all shadow-sm group-hover:shadow-md"
               />
               <button
@@ -140,7 +144,30 @@ const BYOKModal: React.FC<BYOKModalProps> = ({ onClose }) => {
             </div>
           </div>
 
-          {/* Actions */}
+          <div className="mb-4">
+            <label className="block text-[11px] font-black uppercase tracking-[0.2em] text-zinc-300 mb-3 ml-1">
+              Base URL
+            </label>
+            <input
+              type="text"
+              value={baseUrl}
+              onChange={(e) => setBaseUrl(e.target.value)}
+              className="w-full bg-zinc-50 border border-zinc-100 rounded-3xl px-6 py-3 text-sm text-darkDelegation font-mono focus:outline-none focus:border-zinc-200"
+            />
+          </div>
+
+          <div className="mb-10">
+            <label className="block text-[11px] font-black uppercase tracking-[0.2em] text-zinc-300 mb-3 ml-1">
+              Model
+            </label>
+            <input
+              type="text"
+              value={model}
+              onChange={(e) => setModel(e.target.value)}
+              className="w-full bg-zinc-50 border border-zinc-100 rounded-3xl px-6 py-3 text-sm text-darkDelegation font-mono focus:outline-none focus:border-zinc-200"
+            />
+          </div>
+
           <div className="flex items-center justify-between">
             <button
               onClick={handleClear}
@@ -150,7 +177,7 @@ const BYOKModal: React.FC<BYOKModalProps> = ({ onClose }) => {
               <div className="p-2 rounded-xl group-hover:bg-red-50 transition-colors">
                 <Trash2 size={16} strokeWidth={2.5} />
               </div>
-              Clear
+              {uz.clear}
             </button>
 
             <button
@@ -158,7 +185,7 @@ const BYOKModal: React.FC<BYOKModalProps> = ({ onClose }) => {
               disabled={!apiKey.trim()}
               className="px-12 py-4 bg-darkDelegation text-white rounded-[24px] text-xs font-black uppercase tracking-[0.2em] hover:bg-black transition-all active:scale-95 cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed disabled:active:scale-100 shadow-xl shadow-black/10"
             >
-              Save
+              {uz.save}
             </button>
           </div>
         </div>

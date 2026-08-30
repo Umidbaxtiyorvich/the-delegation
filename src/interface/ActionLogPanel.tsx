@@ -398,7 +398,7 @@ ${JSON.stringify(entry.raw, null, 2)}
             {/* Header */}
             <div className="h-10 px-5 border-b border-zinc-100 flex items-center justify-between bg-white shrink-0 z-10">
                 <div className="flex items-center gap-2">
-                    <span className="text-[11px] font-bold text-zinc-500 uppercase tracking-wider">Logs</span>
+                    <span className="text-[11px] font-bold text-zinc-500 uppercase tracking-wider">Loglar</span>
                     {filterAgent && (
                         <div
                             className="flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[9px] font-bold text-white uppercase tracking-tighter animate-in fade-in zoom-in duration-200"

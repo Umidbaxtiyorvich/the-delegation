@@ -1,17 +1,20 @@
-import { Info, KeyRound, Maximize2, Settings } from 'lucide-react';
+import { Brain, Info, KeyRound, Maximize2, Settings } from 'lucide-react';
 import React, { useState } from 'react';
 import packageJson from '../../package.json';
 import { useCoreStore } from '../integration/store/coreStore';
 import { useUiStore } from '../integration/store/uiStore';
+import { uz } from '../i18n/uz';
 import BYOKModal from './BYOKModal';
 import InfoModal from './InfoModal';
+import KnowledgePanel from './KnowledgePanel';
 
 const version = packageJson.version;
 
 const Header: React.FC = () => {
   const { llmConfig, isBYOKOpen, setBYOKOpen } = useUiStore();
-  const { setViewMode } = useCoreStore();
+  const { setViewMode, sharedKnowledge } = useCoreStore();
   const [isInfoOpen, setIsInfoOpen] = useState(false);
+  const [isKnowledgeOpen, setIsKnowledgeOpen] = useState(false);
   const hasKey = !!llmConfig.apiKey;
 
   const handleFullscreen = () => {
@@ -71,12 +74,26 @@ const Header: React.FC = () => {
       <div className="flex items-center gap-3">
 
         <button
+          onClick={() => setIsKnowledgeOpen(true)}
+          className="relative flex items-center gap-2 px-3 py-1 bg-violet-50 hover:bg-violet-100 text-violet-700 rounded-lg transition-all border border-violet-100 cursor-pointer h-9 shrink-0"
+          title={uz.knowledge}
+        >
+          <Brain size={14} />
+          <span className="text-[10px] font-black uppercase tracking-wider hidden sm:inline">{uz.knowledge}</span>
+          {sharedKnowledge.length > 0 && (
+            <span className="absolute -top-1 -right-1 min-w-4 h-4 px-1 rounded-full bg-violet-600 text-white text-[9px] font-bold flex items-center justify-center">
+              {sharedKnowledge.length}
+            </span>
+          )}
+        </button>
+
+        <button
           onClick={() => setViewMode('design')}
           className="flex items-center gap-2 px-3 py-1 bg-darkDelegation hover:bg-darkDelegation text-white rounded-lg transition-all shadow-lg shadow-black/10 active:scale-95 cursor-pointer h-9 shrink-0 ml-1"
-          title="Manage Teams"
+          title={uz.manageTeams}
         >
           <Settings size={14} className="group-hover:rotate-45 transition-transform" />
-          <span className="text-[10px] font-black uppercase tracking-wider ml-1 hidden sm:inline">Manage Teams</span>
+          <span className="text-[10px] font-black uppercase tracking-wider ml-1 hidden sm:inline">{uz.manageTeams}</span>
         </button>
 
         <div className="w-px h-4 bg-zinc-200" />
@@ -92,7 +109,7 @@ const Header: React.FC = () => {
           <button
             onClick={() => setBYOKOpen(true)}
             className="relative text-zinc-400 hover:text-darkDelegation transition-colors p-1"
-            title="API Key (BYOK)"
+            title={uz.apiKey}
           >
             <KeyRound size={16} className={hasKey ? 'text-emerald-500 hover:text-emerald-600' : ''} />
             {hasKey && (
@@ -104,6 +121,10 @@ const Header: React.FC = () => {
 
       {isInfoOpen && (
         <InfoModal key="info-modal" onClose={() => setIsInfoOpen(false)} />
+      )}
+
+      {isKnowledgeOpen && (
+        <KnowledgePanel key="knowledge-panel" onClose={() => setIsKnowledgeOpen(false)} />
       )}
 
       {isBYOKOpen && (
