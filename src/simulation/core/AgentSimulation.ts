@@ -146,6 +146,82 @@ export class AgentSimulation {
     }
   }
 
+  /**
+   * Reconciles the live roster with `system` without tearing down existing hosts,
+   * so agents hired mid-project keep working while the others stay untouched.
+   * Returns the indices that were added.
+   */
+  public syncAgents(system: AgenticSystem): number[] {
+    this.system = system;
+    const roster = getAllAgents(system);
+    const added: number[] = [];
+
+    for (const agentData of roster) {
+      if (!this.agents.has(agentData.index)) {
+        this.agents.set(agentData.index, new AgentHost(agentData, this));
+        added.push(agentData.index);
+      }
+    }
+
+    const live = new Set(roster.map((a) => a.index));
+    for (const [index, host] of this.agents) {
+      if (!live.has(index)) {
+        host.dispose();
+        this.agents.delete(index);
+      }
+    }
+
+    if (added.length > 0) {
+      this.processScheduledTasks();
+      this.scheduleOnboarding(added);
+    }
+
+    return added;
+  }
+
+  /**
+   * A freshly hired agent has no task yet, and nothing else on the board triggers
+   * the lead to give it one. Nudge the lead once it finishes its current turn —
+   * hiring usually happens *inside* that turn, so we wait for it to settle.
+   */
+  private scheduleOnboarding(added: number[], attempt = 0) {
+    if (attempt > 15) return;
+
+    setTimeout(async () => {
+      const core = useCoreStore.getState();
+      if (core.phase !== 'working') return;
+
+      const lead = this.getAgent(this.system.leadAgent.index);
+      if (!lead) return;
+
+      // Still mid-turn (or the newcomer already got picked up): wait, then re-check.
+      if (lead.isThinking) {
+        this.scheduleOnboarding(added, attempt + 1);
+        return;
+      }
+
+      const pending = added.filter(
+        (index) =>
+          this.agents.has(index) &&
+          !core.tasks.some((t) => t.assignedAgentId === index)
+      );
+      if (pending.length === 0) return;
+
+      const names = pending
+        .map((index) => `[${index}] ${this.getAgent(index)?.data.name ?? ''}`.trim())
+        .join(', ');
+
+      try {
+        await lead.think(
+          `Jamoaga yangi agent qoʻshildi: ${names}. Uning roliga mos aniq vazifani propose_task bilan darhol bering.`,
+          { silent: true }
+        );
+      } catch (err) {
+        console.error('[AgentSimulation] Onboarding nudge failed:', err);
+      }
+    }, 1200);
+  }
+
   public getAgent(index: number): AgentHost | undefined {
     return this.agents.get(index);
   }

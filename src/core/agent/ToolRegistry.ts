@@ -5,6 +5,7 @@ import { completeTask } from './tools/completeTask';
 import { deliverProject } from './tools/deliverProject';
 import { shareInsight } from './tools/shareInsight';
 import { requestPeerReview } from './tools/requestPeerReview';
+import { hireAgent } from './tools/hireAgent';
 
 export interface ToolCall {
   name: string;
@@ -41,11 +42,42 @@ export class ToolRegistry {
         return shareInsight(agent, args);
       case 'request_peer_review':
         return requestPeerReview(agent, args);
+      case 'hire_agent':
+        return hireAgent(agent, args);
       default:
         console.warn(`[ToolRegistry] Unknown tool: ${name}`);
         return false;
     }
   }
+
+  /**
+   * Lets the lead grow the team on demand. The role description is deliberately
+   * left to the model so it derives the duties itself instead of echoing the user.
+   */
+  private static readonly HIRE_AGENT_TOOL = {
+    type: 'function',
+    function: {
+      name: 'hire_agent',
+      description:
+        'Hire a new specialist agent into the team when a needed skill is missing. YOU must work out what the role does — do not ask the user. Write the responsibilities yourself, in detail.',
+      parameters: {
+        type: 'object',
+        properties: {
+          role: {
+            type: 'string',
+            description: 'Job title for the new agent, e.g. "Buxgalter". Keep it short.'
+          },
+          responsibilities: {
+            type: 'string',
+            description:
+              'Your own analysis of the role: concrete duties, deliverables and boundaries. 2-4 sentences. This becomes the agent system prompt.'
+          },
+          color: { type: 'string', description: 'Optional hex colour, e.g. #F97316' }
+        },
+        required: ['role', 'responsibilities']
+      }
+    }
+  };
 
   public static getDefinitions(agentIndex: number, phase: string, subagentsCount: number = 0): any[] {
     const isLead = agentIndex === 1;
@@ -67,6 +99,7 @@ export class ToolRegistry {
             }
           }
         });
+        tools.push(ToolRegistry.HIRE_AGENT_TOOL);
       }
       return tools;
     }
@@ -150,6 +183,7 @@ export class ToolRegistry {
       );
 
       if (isLead) {
+        tools.push(ToolRegistry.HIRE_AGENT_TOOL);
         tools.push({
           type: 'function',
           function: {

@@ -37,6 +37,7 @@ export class SceneManager {
   private simulation: AgentSimulation | null = null;
 
   private lastAgentSetId: string | null = null;
+  private lastRosterKey: string = '';
   private selectedIndex: number | null = null;
   private coreHandler: ((npcIndex: number, text: string) => Promise<string | null>) | null = null;
 
@@ -60,10 +61,57 @@ export class SceneManager {
 
     const activeSet = getActiveAgentSet();
     this.simulation = new AgentSimulation(activeSet);
+    this.lastRosterKey = SceneManager.rosterKey(activeSet);
     this.setCoreHandler((idx, text) => this.simulation!.handleUserMessage(idx, text));
     
     this.init();
     this.startWatchingCoreStore();
+    this.startWatchingTeamStore();
+  }
+
+  private static rosterKey(set: AgenticSystem): string {
+    return getAllAgents(set)
+      .map((a) => a.index)
+      .sort((a, b) => a - b)
+      .join(',');
+  }
+
+  /**
+   * Watches for agents joining or leaving the *current* team (e.g. the lead hiring
+   * a specialist via the hire_agent tool). Team switches are handled separately by
+   * the uiStore watcher, which rebuilds the whole simulation.
+   */
+  private startWatchingTeamStore() {
+    this.unsubs.push(
+      useTeamStore.subscribe((state, prevState) => {
+        if (state.selectedAgentSetId !== prevState.selectedAgentSetId) return;
+        if (state.customSystems === prevState.customSystems) return;
+
+        const set = getAgentSet(state.selectedAgentSetId, state.customSystems);
+        const key = SceneManager.rosterKey(set);
+        if (key === this.lastRosterKey) return;
+        this.lastRosterKey = key;
+
+        const added = this.simulation?.syncAgents(set) || [];
+        if (added.length === 0) return;
+
+        const roster = getAllAgents(set);
+        const playerIndex = set.user.index;
+
+        added.forEach((index) => {
+          const node = roster.find((a) => a.index === index);
+          if (node && index !== playerIndex) this.driverManager?.registerNpc(index, node);
+        });
+
+        if (this.controller) {
+          // Instance buffers are indexed directly, so they must span the highest index.
+          const needed = Math.max(playerIndex, ...roster.map((a) => a.index)) + 1;
+          this.controller.setInstanceCount(needed);
+          // Resizing re-inits positions but leaves POI occupancy stale; this clears it.
+          this.controller.warpAllToSpawn(playerIndex, roster.map((a) => a.index));
+        }
+      })
+    );
   }
 
   private startWatchingCoreStore() {
@@ -236,6 +284,7 @@ export class SceneManager {
   private reinitializeSimulation(activeSet: AgenticSystem) {
     if (this.simulation) this.simulation.dispose();
     this.simulation = new AgentSimulation(activeSet);
+    this.lastRosterKey = SceneManager.rosterKey(activeSet);
     this.setCoreHandler((idx, text) => this.simulation!.handleUserMessage(idx, text));
     if (this.driverManager) {
       const playerIndex = activeSet.user.index;

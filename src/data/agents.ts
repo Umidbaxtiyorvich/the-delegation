@@ -3,8 +3,11 @@ import { DEFAULT_MODELS } from '../core/llm/constants';
 
 export const USER_ID = 'user';
 export const USER_NAME = 'User';
-/** Raised from 5 → 8 to support deeper nested multi-agent teams (Ikki Miya). */
-export const MAX_AGENTS = 8;
+/**
+ * Raised from 5 → 12 so the Ikki Miya team (7 agents) still has room for the lead
+ * to hire specialists at runtime via the hire_agent tool.
+ */
+export const MAX_AGENTS = 12;
 export { USER_COLOR };
 export const DEFAULT_AGENTIC_SET_ID = 'ikki-miya';
 export interface AgentNode {

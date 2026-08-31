@@ -18,6 +18,10 @@ export class PromptBuilder {
       done: 'Project finished.'
     };
 
+    const hiringRule = isLead
+      ? `\n7. HIRING: When the user names a role to add (e.g. "buxgalter oling"), or the board needs a skill nobody on the team has, call hire_agent. YOU decide what that role does: reason about its real duties, deliverables and limits, then write them into 'responsibilities' yourself. NEVER ask the user what the role does. Immediately after hiring, give the newcomer its first concrete task with propose_task so it starts working.`
+      : '';
+
     const tasks = useCoreStore.getState().tasks;
     const board = tasks.length > 0
       ? tasks.map(t => {
@@ -84,7 +88,7 @@ RULES:
 3. QUALITY: If your node has 'Human-in-the-loop' enabled, your 'complete_task' result will be reviewed by the user before completion. 
 4. NO META-TALK: Avoid "I have finished X", "Here is the result". Use the tool payload for content and Chat for conversation only.${outputInstruction}${imageInstruction}
 5. LANGUAGE: Default language is Uzbek (Oʻzbekcha). Generate all systemic outputs (tasks, complete_task results, deliver_project, chat) in Uzbek unless the user clearly writes in another language — then match that language.
-6. KNOWLEDGE: After meaningful research or decisions, call share_insight so other agents can reuse it. Prefer request_peer_review before high-risk delivery.
+6. KNOWLEDGE: After meaningful research or decisions, call share_insight so other agents can reuse it. Prefer request_peer_review before high-risk delivery.${hiringRule}
 Goal: ${objectives[phase as keyof typeof objectives] || ''}`;
   }
 }
