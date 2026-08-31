@@ -2,6 +2,7 @@ import { FolderOpen, Lock, MessageSquare, MessageSquareWarning, GitPullRequest }
 import React, { useEffect, useRef } from 'react';
 import { getAgentSet, getAllCharacters } from '../data/agents';
 import { USER_COLOR, USER_COLOR_LIGHT, USER_COLOR_SOFT } from '../theme/brand';
+import { uz } from '../i18n/uz';
 import { useChatAvailability } from '../integration/hooks/useChatAvailability';
 import { useCoreStore } from '../integration/store/coreStore';
 import { useTeamStore, useActiveTeam } from '../integration/store/teamStore';
@@ -119,11 +120,11 @@ const InspectorPanel: React.FC<InspectorPanelProps> = ({ isFloating }) => {
                       <div className="flex items-center justify-center w-4 h-4 rounded text-white shadow-sm" style={{ backgroundColor: USER_COLOR }}>
                         <MessageSquareWarning size={10} strokeWidth={3} />
                       </div>
-                      <span className="text-[9px] font-black uppercase tracking-widest" style={{ color: USER_COLOR }}>Review Requested</span>
+                      <span className="text-[9px] font-black uppercase tracking-widest" style={{ color: USER_COLOR }}>{uz.reviewRequested}</span>
                     </div>
                     <div className="flex items-center gap-1.5">
                       <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                      <span className="text-[9px] font-black uppercase tracking-widest text-emerald-600">Active</span>
+                      <span className="text-[9px] font-black uppercase tracking-widest text-emerald-600">{uz.active}</span>
                     </div>
                   </div>
                   <p className="text-[12px] font-bold text-darkDelegation leading-tight mt-1.5">
@@ -143,7 +144,7 @@ const InspectorPanel: React.FC<InspectorPanelProps> = ({ isFloating }) => {
                     >
                       <MessageSquareWarning size={12} strokeWidth={3} />
                     </div>
-                    <span style={{ color: USER_COLOR }}>Review Requested</span>
+                    <span style={{ color: USER_COLOR }}>{uz.reviewRequested}</span>
                   </div>
                   <div className="flex flex-col gap-2">
                     <p className="text-[12px] font-bold text-darkDelegation leading-tight">
@@ -186,7 +187,7 @@ const InspectorPanel: React.FC<InspectorPanelProps> = ({ isFloating }) => {
                     <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4 flex flex-col gap-3 shadow-sm">
                       <div className="flex items-center gap-2">
                         <div className="w-2 h-2 rounded-full bg-yellow-400 animate-pulse" />
-                        <span className="text-[10px] font-black uppercase tracking-widest text-yellow-700">Project Ready</span>
+                        <span className="text-[10px] font-black uppercase tracking-widest text-yellow-700">{uz.projectReady}</span>
                       </div>
                       <button
                         onClick={() => setFinalOutputOpen(true)}

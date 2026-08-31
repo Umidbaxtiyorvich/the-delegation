@@ -1,8 +1,9 @@
 import { Edit2, Pipette, Trash2, Users, X } from 'lucide-react';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { AgenticSystem, DEFAULT_AGENTIC_SET_ID, getAllAgents } from '../../data/agents';
+import { AgenticSystem, DEFAULT_AGENTIC_SET_ID, getAllAgents, OutputType } from '../../data/agents';
 import { DEFAULT_MODELS, AVAILABLE_MODELS, ModelType } from '../../core/llm/constants';
 import { USER_COLOR } from '../../theme/brand';
+import { uz } from '../../i18n/uz';
 import { useTeamStore } from '../../integration/store/teamStore';
 import { useSceneManager } from '../../simulation/SceneContext';
 import { getBrightness, getDarkenedColor } from './colorUtils';
@@ -153,7 +154,7 @@ export const TeamCard: React.FC<TeamCardProps> = ({
         <div className="mb-3">
           <div className="flex items-center justify-between pb-2 mb-2 border-b border-zinc-100">
             <div className="flex items-center gap-2">
-              <h3 className="text-[9px] font-black uppercase tracking-[0.1em] text-darkDelegation">Edit Team</h3>
+              <h3 className="text-[9px] font-black uppercase tracking-[0.1em] text-darkDelegation">{uz.editTeam}</h3>
             </div>
             <button onClick={handleCloseEdit} className="p-1 hover:bg-zinc-200 rounded-lg text-zinc-400">
               <X size={14} strokeWidth={3} />
@@ -166,7 +167,7 @@ export const TeamCard: React.FC<TeamCardProps> = ({
               </p>
               {showDeleteConfirm && (
                 <div className="flex items-center gap-1 shrink-0">
-                  <button onClick={(e) => { e.stopPropagation(); setShowDeleteConfirm(false); setErrorMsg(null); }} className="px-2 py-0.5 bg-white border border-red-100 text-red-400 rounded-md text-[8px] font-black uppercase tracking-wider">Cancel</button>
+                  <button onClick={(e) => { e.stopPropagation(); setShowDeleteConfirm(false); setErrorMsg(null); }} className="px-2 py-0.5 bg-white border border-red-100 text-red-400 rounded-md text-[8px] font-black uppercase tracking-wider">{uz.cancel}</button>
                   <button onClick={confirmDelete} className="px-2 py-0.5 bg-red-500 text-white rounded-md text-[8px] font-black uppercase tracking-wider">OK</button>
                 </div>
               )}
@@ -181,7 +182,7 @@ export const TeamCard: React.FC<TeamCardProps> = ({
           className="absolute top-3.5 right-3.5 flex items-center gap-1.5 px-3 py-1.5 bg-zinc-100 hover:bg-zinc-200 rounded-xl text-darkDelegation text-[9px] font-black uppercase tracking-widest transition-all opacity-0 group-hover:opacity-100 z-10"
         >
           <Edit2 size={12} strokeWidth={2.5} />
-          Edit Team
+          {uz.editTeam}
         </button>
       )}
 
@@ -205,7 +206,7 @@ export const TeamCard: React.FC<TeamCardProps> = ({
           <div className="flex-1 min-w-0 flex flex-col">
             {isEditing ? (
               <div className="space-y-1 mb-2">
-                <label className="text-[7px] font-black uppercase text-zinc-400 ml-1">Team Color</label>
+                <label className="text-[7px] font-black uppercase text-zinc-400 ml-1">{uz.teamColor}</label>
                 <div className="px-1">
                   <ColorPicker
                     color={localEditData.color || '#A855F7'}
@@ -215,8 +216,8 @@ export const TeamCard: React.FC<TeamCardProps> = ({
               </div>
             ) : (
               <div className="space-y-0.5">
-                <h4 className={`text-[11px] font-black leading-tight uppercase tracking-wider truncate mb-0.5 ${system.teamName ? 'text-darkDelegation' : 'text-zinc-300'}`}>{system.teamName || 'Untitled Team'}</h4>
-                <p className={`text-[9px] font-bold uppercase tracking-[0.1em] ${system.teamType ? 'text-zinc-400' : 'text-zinc-200'}`}>{system.teamType || 'Unspecified Type'}</p>
+                <h4 className={`text-[11px] font-black leading-tight uppercase tracking-wider truncate mb-0.5 ${system.teamName ? 'text-darkDelegation' : 'text-zinc-300'}`}>{system.teamName || 'Nomsiz jamoa'}</h4>
+                <p className={`text-[9px] font-bold uppercase tracking-[0.1em] ${system.teamType ? 'text-zinc-400' : 'text-zinc-200'}`}>{system.teamType || 'Tur belgilanmagan'}</p>
               </div>
             )}
           </div>
@@ -227,7 +228,7 @@ export const TeamCard: React.FC<TeamCardProps> = ({
           {isEditing ? (
             <div className="space-y-2 mb-3" onClick={(e) => e.stopPropagation()}>
               <div className="space-y-1">
-                <label className="text-[7px] font-black uppercase text-zinc-400 ml-1">Team Name</label>
+                <label className="text-[7px] font-black uppercase text-zinc-400 ml-1">{uz.teamName}</label>
                 <input
                   value={localEditData.teamName || ''}
                   onChange={(e) => { setLocalEditData(prev => ({ ...prev, teamName: e.target.value })); setErrorMsg(null); }}
@@ -238,7 +239,7 @@ export const TeamCard: React.FC<TeamCardProps> = ({
                 />
               </div>
               <div className="space-y-1">
-                <label className="text-[7px] font-black uppercase text-zinc-400 ml-1">Team Type</label>
+                <label className="text-[7px] font-black uppercase text-zinc-400 ml-1">{uz.teamType}</label>
                 <input
                   value={localEditData.teamType || ''}
                   onChange={(e) => { setLocalEditData(prev => ({ ...prev, teamType: e.target.value })); setErrorMsg(null); }}
@@ -248,7 +249,7 @@ export const TeamCard: React.FC<TeamCardProps> = ({
                 />
               </div>
               <div className="space-y-1">
-                <label className="text-[7px] font-black uppercase text-zinc-400 ml-1">Description</label>
+                <label className="text-[7px] font-black uppercase text-zinc-400 ml-1">{uz.description}</label>
                 <textarea
                   value={localEditData.teamDescription || ''}
                   onChange={(e) => { setLocalEditData(prev => ({ ...prev, teamDescription: e.target.value })); setErrorMsg(null); }}
@@ -259,11 +260,11 @@ export const TeamCard: React.FC<TeamCardProps> = ({
               </div>
               <div className="grid grid-cols-2 gap-2">
                 <div className="space-y-1">
-                  <label className="text-[7px] font-black uppercase text-zinc-400 ml-1">Output Type</label>
+                  <label className="text-[7px] font-black uppercase text-zinc-400 ml-1">{uz.outputType}</label>
                   <select
                     value={localEditData.outputType || 'text'}
                     onChange={(e) => {
-                      const newType = e.target.value as keyof typeof DEFAULT_MODELS;
+                      const newType = e.target.value as OutputType;
                       setLocalEditData(prev => ({
                         ...prev,
                         outputType: newType,
@@ -273,14 +274,14 @@ export const TeamCard: React.FC<TeamCardProps> = ({
                     }}
                     className="w-full bg-white border border-zinc-100 text-[11px] font-bold rounded-xl px-2.5 py-1.5 outline-none cursor-pointer"
                   >
-                    <option value="text">TEXT</option>
-                    <option value="image">IMAGE</option>
-                    <option value="music">MUSIC</option>
+                    <option value="text">MATN</option>
+                    <option value="image">RASM</option>
+                    <option value="music">MUSIQA</option>
                     <option value="video">VIDEO</option>
                   </select>
                 </div>
                 <div className="space-y-1">
-                  <label className="text-[7px] font-black uppercase text-zinc-400 ml-1">Output Model</label>
+                  <label className="text-[7px] font-black uppercase text-zinc-400 ml-1">{uz.outputModel}</label>
                   <select
                     value={localEditData.outputModel || DEFAULT_MODELS.text}
                     onChange={(e) => setLocalEditData(prev => ({ ...prev, outputModel: e.target.value }))}
@@ -296,10 +297,10 @@ export const TeamCard: React.FC<TeamCardProps> = ({
               <div className="flex items-center justify-between p-2.5 bg-zinc-50 border border-zinc-100/50 rounded-xl mt-0.5">
                 <div className="flex flex-col">
                   <div className="flex items-center gap-1">
-                    <span className="text-[8px] font-black uppercase text-darkDelegation tracking-wider">Auto-Approve Output</span>
-                    <InfoBubble text="When enabled, the team will generate the final asset immediately after finishing all tasks without waiting for your review." />
+                    <span className="text-[8px] font-black uppercase text-darkDelegation tracking-wider">Natijani avto tasdiqlash</span>
+                    <InfoBubble text="Yoqilganda jamoa barcha vazifalarni tugatgach, sizning tekshiruvingizni kutmasdan yakuniy natijani darhol yaratadi." />
                   </div>
-                  <span className="text-[7px] text-zinc-400 font-bold leading-tight">Generate asset without review</span>
+                  <span className="text-[7px] text-zinc-400 font-bold leading-tight">Tekshiruvsiz yaratish</span>
                 </div>
                 <button
                   type="button"
@@ -310,32 +311,32 @@ export const TeamCard: React.FC<TeamCardProps> = ({
                 </button>
               </div>
 
-              <button onClick={handleSave} disabled={!isFormValid} className={`w-full py-2.5 mt-1 rounded-xl text-[10px] font-black uppercase tracking-[0.1em] transition-all shadow-lg ${isFormValid ? 'bg-darkDelegation text-white shadow-black/10' : 'bg-zinc-50 text-zinc-300 shadow-none cursor-not-allowed'}`}>Save Changes</button>
+              <button onClick={handleSave} disabled={!isFormValid} className={`w-full py-2.5 mt-1 rounded-xl text-[10px] font-black uppercase tracking-[0.1em] transition-all shadow-lg ${isFormValid ? 'bg-darkDelegation text-white shadow-black/10' : 'bg-zinc-50 text-zinc-300 shadow-none cursor-not-allowed'}`}>{uz.saveChanges}</button>
             </div>
           ) : (
             <div className="space-y-0.5 mb-2.5 px-2">
               <TeamOutputBadge system={system} className="mt-1" />
 
-              <p className={`text-[10px] leading-relaxed font-medium mt-2 line-clamp-2 ${system.teamDescription ? 'text-zinc-500/80' : 'text-zinc-300 italic'}`}>{system.teamDescription || 'No description provided.'}</p>
+              <p className={`text-[10px] leading-relaxed font-medium mt-2 line-clamp-2 ${system.teamDescription ? 'text-zinc-500/80' : 'text-zinc-300 italic'}`}>{system.teamDescription || uz.noDescription}</p>
             </div>
           )}
 
           <div className={`flex items-center justify-between mt-auto pt-2 ${isEditing ? 'border-t border-zinc-100/30' : ''}`}>
             <div className="flex items-center gap-1.5 px-2 py-1 bg-zinc-50 text-[8px] font-black text-zinc-400 rounded-lg">
               <Users size={10} strokeWidth={3} />
-              {agentCount} {agentCount === 1 ? 'AGENT' : 'AGENTS'}
+              {agentCount} AGENT
             </div>
             <div className="flex items-center gap-2">
               {isActive && !isEditing && (
-                <div className="px-2 py-0.5 rounded-full text-white text-[7px] font-black uppercase tracking-[0.15em]" style={{ backgroundColor: system.color }}>Active</div>
+                <div className="px-2 py-0.5 rounded-full text-white text-[7px] font-black uppercase tracking-[0.15em]" style={{ backgroundColor: system.color }}>{uz.active}</div>
               )}
               {isSelected && !isActive && !isEditing && (
-                <button onClick={handleSwitch} className="px-3 py-1.5 bg-darkDelegation text-white rounded-full text-[9px] font-black uppercase tracking-wider shadow-md">Switch</button>
+                <button onClick={handleSwitch} className="px-3 py-1.5 bg-darkDelegation text-white rounded-full text-[9px] font-black uppercase tracking-wider shadow-md">{uz.switch}</button>
               )}
               {isEditing && (
                 <button onClick={handleDelete} className="flex items-center gap-1.5 px-2 py-1 text-red-500 hover:bg-red-50 rounded-lg text-[8px] font-black uppercase tracking-widest transition-all">
                   <Trash2 size={12} />
-                  Delete Team
+                  Jamoani oʻchirish
                 </button>
               )}
             </div>

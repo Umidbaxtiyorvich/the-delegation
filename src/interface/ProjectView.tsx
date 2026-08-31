@@ -99,7 +99,7 @@ const ProjectView: React.FC = () => {
 
             {(activeTeam.outputType === 'image' || activeTeam.outputType === 'video') && referenceImages.length > 0 && (
               <div className="flex flex-col gap-2">
-                <p className="text-[9px] font-black uppercase tracking-widest text-zinc-400">Brief Logic References</p>
+                <p className="text-[9px] font-black uppercase tracking-widest text-zinc-400">{uz.briefReferences}</p>
                 <div className="grid grid-cols-3 gap-2">
                   {referenceImages.map((img, idx) => (
                     <div key={idx} className="aspect-square rounded-xl overflow-hidden border border-zinc-100 shadow-sm bg-zinc-50">

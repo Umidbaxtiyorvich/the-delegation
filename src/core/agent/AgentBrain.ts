@@ -75,7 +75,11 @@ export class AgentBrain {
       }
 
       // 2. Prepare context
-      let messages: LLMMessage[] = this.history.slice(-10);
+      // Widen the window backwards so it never starts mid tool-call sequence,
+      // which OpenAI rejects (orphaned 'tool' messages).
+      let start = Math.max(0, this.history.length - 10);
+      while (start > 0 && this.history[start].role === 'tool') start--;
+      let messages: LLMMessage[] = this.history.slice(start);
 
       // In chat mode, ensure the latest user message also carries images if it's the brief phase
       if (options.isChat && hasVisionSupport && core.referenceImages.length > 0) {
@@ -120,14 +124,16 @@ export class AgentBrain {
 
       // 5. Parse Tool Calls
       const text = response.content || '';
-      const toolCalls = response.tool_calls?.map(tc => {
+      // Kept index-aligned with response.tool_calls so every call can be answered.
+      const parsedCalls = (response.tool_calls || []).map(tc => {
         try {
-          return { name: tc.function.name, args: JSON.parse(tc.function.arguments) };
+          return { id: tc.id, name: tc.function.name, args: JSON.parse(tc.function.arguments), ok: true };
         } catch (e) {
           console.error('[AgentBrain] Failed to parse tool arguments', tc.function.arguments);
-          return null;
+          return { id: tc.id, name: tc.function.name, args: {}, ok: false };
         }
-      }).filter(Boolean) as any[] || [];
+      });
+      const toolCalls = parsedCalls.filter(tc => tc.ok).map(tc => ({ name: tc.name, args: tc.args })) as any[];
 
       // 6. Final Message Construction
       const isInternalTrigger = options.silent;
@@ -166,18 +172,26 @@ export class AgentBrain {
       this.syncToStore();
 
       // 7. Process Actions (Tools) + OpenAI tool-result messages
-      for (let i = 0; i < toolCalls.length; i++) {
-        const tc = toolCalls[i];
-        const handled = ToolRegistry.process(this.host as any, tc);
-        const matching = response.tool_calls?.[i];
+      for (const call of parsedCalls) {
+        let content: string;
+        let handled = false;
+
+        if (!call.ok) {
+          content = `FAILED: ${call.name} — argumentlar notoʻgʻri JSON`;
+        } else {
+          handled = ToolRegistry.process(this.host as any, { name: call.name, args: call.args });
+          content = handled ? `OK: ${call.name}` : `FAILED: ${call.name}`;
+        }
+
         this.history.push({
           role: 'tool',
-          name: matching?.id || tc.name,
-          content: handled ? `OK: ${tc.name}` : `FAILED: ${tc.name}`,
+          name: call.id,
+          content,
           metadata: { internal: true },
         });
-        if (tc.name === 'deliver_project' && handled) {
-          this.handleFinalAssetGeneration(tc.args.output);
+
+        if (call.ok && call.name === 'deliver_project' && handled) {
+          this.handleFinalAssetGeneration(call.args.output);
         }
       }
       this.syncToStore();

@@ -65,7 +65,7 @@ export const ReferenceImages: React.FC = () => {
         <div className="flex items-center gap-1.5">
           <UploadCloud size={12} className={isDragging ? 'text-darkDelegation animate-bounce' : 'text-zinc-400'} />
           <span className={`text-[10px] font-black uppercase tracking-widest transition-colors ${isDragging ? 'text-darkDelegation' : 'text-zinc-400'
-            }`}>Reference Images</span>
+            }`}>Namuna rasmlar</span>
         </div>
         <span className="text-[9px] font-bold text-zinc-300 uppercase tracking-tighter">
           {referenceImages.length}/{maxImages} Slots
@@ -110,7 +110,7 @@ export const ReferenceImages: React.FC = () => {
               <Plus size={14} className={isDragging ? 'text-white' : 'text-zinc-400 group-hover:text-darkDelegation'} />
             </div>
             <span className={`text-[8px] font-black uppercase tracking-tighter transition-colors ${isDragging ? 'text-darkDelegation' : 'text-zinc-300 group-hover:text-zinc-500'
-              }`}>Add</span>
+              }`}>Qoʻshish</span>
           </button>
         )}
 

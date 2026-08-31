@@ -19,6 +19,7 @@ import {
 } from 'lucide-react'
 import { AVAILABLE_MODELS } from '../core/llm/constants'
 import { InfoBubble } from './components/InfoBubble'
+import { uz } from '../i18n/uz'
 
 export function OutputReviewModal() {
   const {
@@ -151,8 +152,8 @@ export function OutputReviewModal() {
     return (
       <div className="space-y-2">
         <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400 flex items-center gap-1.5">
-          <Sparkles size={12} /> Generation Model
-          <InfoBubble text="Select the specific Gemini model used for the final generation. Flash models are faster, Pro models are more capable." />
+          <Sparkles size={12} /> {uz.generationModel}
+          <InfoBubble text={uz.generationModelHint} />
         </label>
         <select
           value={params.model || activeTeam.outputModel}

@@ -39,9 +39,11 @@ export class OpenAIProvider implements LLMProvider {
       chatMessages.push(this.mapMessage(msg));
     }
 
+    const validMessages = this.repairToolSequences(chatMessages);
+
     const body: Record<string, unknown> = {
       model: modelName,
-      messages: chatMessages,
+      messages: validMessages,
     };
 
     if (tools && tools.length > 0) {
@@ -107,7 +109,7 @@ export class OpenAIProvider implements LLMProvider {
       finishReason: choice?.finish_reason,
       raw,
       request: {
-        contents: chatMessages,
+        contents: validMessages,
         systemInstruction,
         tools,
       },
@@ -173,6 +175,56 @@ export class OpenAIProvider implements LLMProvider {
     );
   }
 
+  /**
+   * OpenAI rejects a `tool` message that is not preceded by an assistant message
+   * carrying a matching `tool_calls` entry, and also rejects an assistant
+   * `tool_calls` entry that never receives a response. History truncation
+   * (`slice`) and unparsable tool arguments can produce both cases, so pair them
+   * up here and drop whatever is left orphaned.
+   */
+  private repairToolSequences(messages: OpenAIChatMessage[]): OpenAIChatMessage[] {
+    const result: OpenAIChatMessage[] = [];
+
+    for (let i = 0; i < messages.length; i++) {
+      const msg = messages[i];
+
+      if (msg.role === 'tool') {
+        continue; // Only emitted alongside its assistant message, below.
+      }
+
+      if (msg.role !== 'assistant' || !msg.tool_calls?.length) {
+        result.push(msg);
+        continue;
+      }
+
+      // Collect the contiguous run of tool replies belonging to this assistant.
+      const replies = new Map<string, OpenAIChatMessage>();
+      let j = i + 1;
+      while (j < messages.length && messages[j].role === 'tool') {
+        const id = messages[j].tool_call_id;
+        if (id) replies.set(id, messages[j]);
+        j++;
+      }
+
+      const answered = msg.tool_calls.filter((tc) => replies.has(tc.id));
+
+      if (answered.length === 0) {
+        // No usable replies: keep the turn as plain text so context survives.
+        if (msg.content) result.push({ role: 'assistant', content: msg.content });
+      } else {
+        result.push({ ...msg, tool_calls: answered });
+        for (const tc of answered) {
+          result.push(replies.get(tc.id)!);
+        }
+      }
+
+      i = j - 1;
+    }
+
+    // A leading assistant/tool remnant is harmless, but an empty payload is not.
+    return result.length > 0 ? result : messages.filter((m) => m.role === 'system' || m.role === 'user');
+  }
+
   private mapMessage(msg: LLMMessage): OpenAIChatMessage {
     if (msg.images && msg.images.length > 0 && msg.role === 'user') {
       const parts: Array<{ type: string; text?: string; image_url?: { url: string } }> = [];
@@ -202,11 +254,11 @@ export class OpenAIProvider implements LLMProvider {
     }
 
     if (msg.role === 'tool') {
+      // `name` carries the originating tool_call id (see AgentBrain history push).
       return {
         role: 'tool',
         content: msg.content,
         tool_call_id: msg.name,
-        name: msg.name,
       };
     }
 

@@ -54,7 +54,7 @@ const InternalHeader = ({ onClose, system }: { onClose: () => void, system: any 
 const AgentPlaceholder = () => (
   <div className="w-80 flex flex-col items-center justify-center p-8 text-center text-zinc-400">
     <User size={32} strokeWidth={1.5} className="mb-4 opacity-20" />
-    <p className="text-[10px] uppercase font-bold tracking-widest">Select an agent</p>
+    <p className="text-[10px] uppercase font-bold tracking-widest">Agentni tanlang</p>
     <p className="text-[9px] mt-2 leading-relaxed italic opacity-60">Click on any node in the flow to view and edit its details.</p>
   </div>
 );

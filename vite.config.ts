@@ -11,7 +11,7 @@ export default defineConfig(({mode}) => {
   
   return {
     // Local: http://localhost:3000/  |  GitHub Pages build: set VITE_BASE=/the-delegation/
-    base: process.env.VITE_BASE || '/',
+    base: process.env.VITE_BASE || (isProduction ? '/the-delegation/' : '/'),
     plugins: [react(), tailwindcss()],
     define: {
       'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY || ''),

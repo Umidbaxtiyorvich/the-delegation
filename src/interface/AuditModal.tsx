@@ -9,6 +9,7 @@ import { useActiveTeam } from '../integration/store/teamStore';
 import { Avatar } from './components/Avatar';
 import { InfoBubble } from './components/InfoBubble';
 import { USER_COLOR, USER_COLOR_LIGHT, USER_COLOR_SOFT } from '../theme/brand';
+import { uz } from '../i18n/uz';
 
 interface AuditModalProps {
   taskId: string;
@@ -79,7 +80,7 @@ export const AuditModal: React.FC<AuditModalProps> = ({ taskId, isOpen, onClose,
               <div className="flex items-center gap-2 mb-1">
                 <span className="text-sm font-black text-darkDelegation uppercase tracking-widest">{agent?.name}</span>
                 {!isViewMode && (
-                  <span className="text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full" style={{ backgroundColor: USER_COLOR_LIGHT, color: USER_COLOR }}>Requires Review</span>
+                  <span className="text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full" style={{ backgroundColor: USER_COLOR_LIGHT, color: USER_COLOR }}>{uz.requiresReview}</span>
                 )}
               </div>
               <h2 className="text-2xl font-semibold text-darkDelegation tracking-tight leading-tight">
@@ -143,8 +144,8 @@ export const AuditModal: React.FC<AuditModalProps> = ({ taskId, isOpen, onClose,
               <div className="w-56 shrink-0 flex flex-col pt-4 animate-in fade-in slide-in-from-right-4 duration-700">
                 <div className="flex items-center gap-2 mb-6" style={{ color: USER_COLOR }}>
                   <div className="w-2 h-2 rounded-full animate-pulse" style={{ backgroundColor: USER_COLOR }} />
-                  <span className="text-[10px] font-black uppercase tracking-widest">Version History</span>
-                  <InfoBubble text="View previous iterations of this task. You can see how the work evolved or revert to a stronger version." />
+                  <span className="text-[10px] font-black uppercase tracking-widest">{uz.versionHistory}</span>
+                  <InfoBubble text="Bu vazifaning oldingi versiyalarini koʻring. Ish qanday oʻzgarganini kuzatib, kuchliroq versiyaga qaytishingiz mumkin." />
                 </div>
                 <div className="space-y-2 overflow-y-auto pr-2 max-h-[60vh] [scrollbar-width:none]">
                   {task.revisions.map((rev, idx) => (
@@ -180,7 +181,7 @@ export const AuditModal: React.FC<AuditModalProps> = ({ taskId, isOpen, onClose,
                           : 'bg-white border-zinc-100 hover:border-emerald-200'}
                       `}
                     >
-                      <span className="text-[12px] font-black uppercase tracking-widest text-emerald-600">Active Review</span>
+                      <span className="text-[12px] font-black uppercase tracking-widest text-emerald-600">{uz.activeReview}</span>
                       <p className="text-[12px] text-emerald-400 font-medium leading-none">In review process...</p>
                     </button>
                   )}
@@ -196,14 +197,14 @@ export const AuditModal: React.FC<AuditModalProps> = ({ taskId, isOpen, onClose,
             <div className="flex items-center gap-2 mb-2 text-zinc-400">
               <div className="flex items-center gap-2">
                 <GitPullRequest size={12} />
-                <span className="text-[9px] font-black uppercase tracking-widest">Your Feedback</span>
+                <span className="text-[9px] font-black uppercase tracking-widest">{uz.yourFeedback}</span>
               </div>
-              <InfoBubble text="Provide specific instructions for what to change. The agent will read this and attempt a new version." />
+              <InfoBubble text="Nimani oʻzgartirish kerakligini aniq yozing. Agent buni oʻqib, yangi versiya yaratadi." />
             </div>
             <textarea
               value={feedback}
               onChange={(e) => setFeedback(e.target.value)}
-              placeholder="Describe what needs to be changed before rejecting..."
+              placeholder={uz.feedbackPlaceholder}
               className="w-full bg-zinc-50 border border-zinc-100 rounded-xl p-3 text-[13px] focus:outline-none focus:ring-2 focus:ring-darkDelegation/5 transition-all resize-none h-20 placeholder:text-zinc-300 placeholder:italic"
             />
           </div>

@@ -6,6 +6,7 @@ import { useCoreStore, type Task, type TaskStatus } from '../integration/store/c
 import { getActiveAgentSet, useTeamStore } from '../integration/store/teamStore'
 import { useUiStore } from '../integration/store/uiStore'
 import DeleteTaskModal from './DeleteTaskModal'
+import { uz } from '../i18n/uz'
 
 const COLUMNS: { status: TaskStatus; label: string }[] = [
   { status: 'scheduled', label: 'Rejada' },
@@ -78,7 +79,7 @@ function TaskCard({ task }: { task: Task; key?: string }) {
                   setIsDeleteModalOpen(true)
                 }}
                 className="p-1 text-zinc-300 hover:text-red-500 hover:bg-red-50 rounded transition-all"
-                title="Remove task"
+                title={uz.removeTask}
               >
                 <Trash2 size={12} />
               </button>
@@ -128,7 +129,7 @@ function TaskCard({ task }: { task: Task; key?: string }) {
                 setActiveAuditTaskId(task.id);
               }}
               className="p-1 px-2 text-zinc-400 hover:text-emerald-500 hover:bg-emerald-50 rounded-lg transition-all flex items-center gap-1.5 group/audit"
-              title="View work details"
+              title={uz.viewWorkDetails}
             >
               {task.revisions?.length > 0 && (
                 <span className="text-[10px] font-black text-zinc-300 group-hover/audit:text-emerald-400 transition-colors">
@@ -176,7 +177,7 @@ export function KanbanPanel({ height = 320 }: KanbanPanelProps) {
                   ))}
                   {colTasks.length === 0 && (
                     <div className="border border-dashed border-zinc-100 rounded-lg p-4 flex items-center justify-center select-none">
-                      <span className="text-[10px] font-bold text-zinc-300 uppercase tracking-widest">Empty</span>
+                      <span className="text-[10px] font-bold text-zinc-300 uppercase tracking-widest">{uz.empty}</span>
                     </div>
                   )}
                 </div>

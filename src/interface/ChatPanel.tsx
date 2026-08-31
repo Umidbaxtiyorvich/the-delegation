@@ -232,7 +232,7 @@ const ChatPanel: React.FC = () => {
                   handleSend();
                 }
               }}
-              placeholder="Message (↵ to send)"
+              placeholder="Xabar (↵ yuborish)"
               className="w-full bg-white border border-zinc-200 rounded-2xl px-3 py-3 text-sm focus:outline-none focus:ring-2 transition-all resize-none pr-12 [scrollbar-width:none]"
               style={{
                 borderColor: input.trim() ? USER_COLOR : undefined,
