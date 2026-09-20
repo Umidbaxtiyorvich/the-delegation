@@ -30,6 +30,10 @@ export class AgentHost implements AgentActionContext, BrainHost {
     return this.brain.spark();
   }
 
+  public async sparkAutoPost() {
+    return this.brain.sparkAutoPost();
+  }
+
   public async executeTask(taskId: string) {
     return this.brain.executeTask(taskId);
   }

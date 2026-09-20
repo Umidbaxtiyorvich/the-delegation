@@ -1,4 +1,4 @@
-import { Send } from 'lucide-react';
+import { FolderOpen, Paperclip, Send, X } from 'lucide-react';
 import React, { useEffect, useRef, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -9,8 +9,14 @@ import { useTeamStore, useActiveTeam } from '../integration/store/teamStore';
 import { useUiStore } from '../integration/store/uiStore';
 import { useSceneManager } from '../simulation/SceneContext';
 import { Avatar } from './components/Avatar';
+import { AgentPortrait } from './components/AgentPortrait';
 import { AuditModal } from './AuditModal';
 import { FileSearch } from 'lucide-react';
+import {
+  downloadReturnedFile,
+  filesToAttachments,
+  type ChatAttachment,
+} from '../core/chat/attachments';
 
 const ChatPanel: React.FC = () => {
   const {
@@ -26,6 +32,10 @@ const ChatPanel: React.FC = () => {
   const selectedAgentSetId = activeTeam.id;
 
   const [input, setInput] = useState('');
+  const [attachments, setAttachments] = useState<ChatAttachment[]>([]);
+  const [addingFiles, setAddingFiles] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
+  const folderRef = useRef<HTMLInputElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const typingIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const stopTypingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -87,15 +97,28 @@ const ChatPanel: React.FC = () => {
     setInput(pastedText);
   };
 
+  const addFiles = async (list: FileList | null) => {
+    if (!list?.length) return;
+    setAddingFiles(true);
+    try {
+      const next = await filesToAttachments(list);
+      setAttachments((prev) => [...prev, ...next].slice(0, 16));
+    } finally {
+      setAddingFiles(false);
+    }
+  };
+
   const handleSend = async () => {
-    if (!input.trim() || isThinking) return;
+    if ((!input.trim() && !attachments.length) || isThinking) return;
     if (typingIntervalRef.current) clearInterval(typingIntervalRef.current);
     if (stopTypingTimeoutRef.current) clearTimeout(stopTypingTimeoutRef.current);
     setIsTyping(false);
 
-    const text = input;
+    const text = input.trim() || 'Shu fayllarni izohsiz qilib ber.';
+    const files = attachments;
     setInput('');
-    await scene?.sendMessage(text);
+    setAttachments([]);
+    await scene?.sendMessage(text, files);
   };
 
   if (!isChatting || !agent) {
@@ -117,8 +140,10 @@ const ChatPanel: React.FC = () => {
             <div className={`flex items-start gap-4 ${msg.role === 'user' ? 'flex-row-reverse' : 'flex-row'} max-w-[90%]`}>
               {/* Avatar / Icon */}
               <div className="shrink-0 mt-1">
-                {msg.role === 'assistant' ? (
-                  <Avatar type={agent?.index === activeTeam.leadAgent.index ? 'lead' : 'sub'} color={agent?.color} size={32} />
+                {msg.role === 'assistant' && agent ? (
+                  <AgentPortrait subject={agent} size={32} />
+                ) : msg.role === 'assistant' ? (
+                  <Avatar type="sub" color={agent?.color} size={32} />
                 ) : (
                   <Avatar type="user" color={USER_COLOR} size={32} />
                 )}
@@ -174,6 +199,24 @@ const ChatPanel: React.FC = () => {
                   ) : (
                     <div className="whitespace-pre-wrap">{msg.content}</div>
                   )}
+                  {!!msg.metadata?.attachments?.length && (
+                    <div className="mt-2 flex flex-wrap gap-1.5">
+                      {msg.metadata.attachments.map((f: ChatAttachment) => (
+                        <span key={f.id} className="text-[9px] font-bold bg-white/70 border border-zinc-200 rounded-lg px-2 py-0.5">
+                          {f.name}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                  {msg.metadata?.returnedFile && (
+                    <button
+                      type="button"
+                      onClick={() => downloadReturnedFile(msg.metadata!.returnedFile!)}
+                      className="mt-3 w-full px-3 py-2 bg-darkDelegation text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-black"
+                    >
+                      Yuklab olish · {msg.metadata.returnedFile.filename}
+                    </button>
+                  )}
                 </div>
 
                 <div className={`flex items-center gap-2 mt-2 px-1`}>
@@ -208,7 +251,34 @@ const ChatPanel: React.FC = () => {
 
       {/* Input */}
       <div className="p-2 border-t border-zinc-50">
-        <div className="relative flex items-center gap-2">
+        {attachments.length > 0 && (
+          <div className="flex flex-wrap gap-1.5 mb-2">
+            {attachments.map((f) => (
+              <span key={f.id} className="inline-flex items-center gap-1 text-[9px] font-bold bg-zinc-100 rounded-lg px-2 py-1 max-w-[140px]">
+                <span className="truncate">{f.name}</span>
+                <button type="button" onClick={() => setAttachments((p) => p.filter((x) => x.id !== f.id))}>
+                  <X size={10} />
+                </button>
+              </span>
+            ))}
+          </div>
+        )}
+        <div
+          className="relative flex items-end gap-2"
+          onDragOver={(e) => e.preventDefault()}
+          onDrop={(e) => {
+            e.preventDefault();
+            addFiles(e.dataTransfer.files);
+          }}
+        >
+          <input ref={fileRef} type="file" multiple className="hidden" onChange={(e) => { addFiles(e.target.files); e.target.value = ''; }} />
+          <input ref={folderRef} type="file" multiple className="hidden" {...({ webkitdirectory: '', directory: '' } as any)} onChange={(e) => { addFiles(e.target.files); e.target.value = ''; }} />
+          <button type="button" title="Fayl / zip / rasm / video" onClick={() => fileRef.current?.click()} className="h-11 w-10 shrink-0 rounded-2xl bg-zinc-100 text-zinc-500 hover:text-darkDelegation flex items-center justify-center">
+            <Paperclip size={16} />
+          </button>
+          <button type="button" title="Papka" onClick={() => folderRef.current?.click()} className="h-11 w-10 shrink-0 rounded-2xl bg-zinc-100 text-zinc-500 hover:text-darkDelegation flex items-center justify-center">
+            <FolderOpen size={16} />
+          </button>
           <div className="flex-1 relative">
             <textarea
               value={input}
@@ -232,19 +302,19 @@ const ChatPanel: React.FC = () => {
                   handleSend();
                 }
               }}
-              placeholder="Xabar (↵ yuborish)"
-              className="w-full bg-white border border-zinc-200 rounded-2xl px-3 py-3 text-sm focus:outline-none focus:ring-2 transition-all resize-none pr-12 [scrollbar-width:none]"
+              placeholder="Izoh yozing yoki fayl tashlang"
+              className="w-full bg-white border border-zinc-200 rounded-2xl px-3 py-3 text-sm focus:outline-none focus:ring-2 transition-all resize-none [scrollbar-width:none]"
               style={{
-                borderColor: input.trim() ? USER_COLOR : undefined,
-                boxShadow: input.trim() ? `0 0 0 2px ${USER_COLOR_LIGHT}` : undefined
+                borderColor: input.trim() || attachments.length ? USER_COLOR : undefined,
+                boxShadow: input.trim() || attachments.length ? `0 0 0 2px ${USER_COLOR_LIGHT}` : undefined
               }}
             />
           </div>
           <button
             onClick={handleSend}
-            disabled={!input.trim() || isThinking}
-            style={{ backgroundColor: !input.trim() || isThinking ? undefined : agent.color }}
-            className={`h-11 w-11 shrink-0 rounded-2xl flex items-center justify-center font-black text-xs uppercase tracking-widest transition-all active:scale-95 ${!input.trim() || isThinking
+            disabled={(!input.trim() && !attachments.length) || isThinking || addingFiles}
+            style={{ backgroundColor: (!input.trim() && !attachments.length) || isThinking ? undefined : agent.color }}
+            className={`h-11 w-11 shrink-0 rounded-2xl flex items-center justify-center font-black text-xs uppercase tracking-widest transition-all active:scale-95 ${(!input.trim() && !attachments.length) || isThinking
               ? 'bg-zinc-100 text-zinc-400 cursor-not-allowed'
               : 'text-white shadow-lg hover:brightness-90'
               }`}
@@ -253,7 +323,7 @@ const ChatPanel: React.FC = () => {
           </button>
         </div>
         <p className="text-[8px] text-zinc-400 mt-2 text-center font-medium uppercase tracking-wider">
-          Shift + ↵ for new line
+          Fayl · papka · zip · rasm · video + izoh
         </p>
       </div>
     </div>

@@ -6,3 +6,8 @@ coverage/
 *.log
 .env*
 !.env.example
+
+# Bundled output of the avatar check script (npm run check:avatars)
+scripts/.check-avatars.mjs
+# Screenshots from the scene check (npm run check:scene)
+scripts/.scene-shots/

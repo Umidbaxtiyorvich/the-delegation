@@ -17,9 +17,12 @@ export const TeamsPanel: React.FC<TeamsPanelProps> = ({ onSelectTeam, selectedTe
 
   const allSystems = useMemo(() => {
     const combined = [...customSystems, ...AGENTIC_SETS];
-    return combined.filter((sys, index, self) =>
+    const unique = combined.filter((sys, index, self) =>
       index === self.findIndex((s) => s.id === sys.id)
     );
+    const pinned = unique.filter((s) => s.id === 'ruflo-swarm');
+    const rest = unique.filter((s) => s.id !== 'ruflo-swarm');
+    return [...pinned, ...rest];
   }, [customSystems]);
 
   const handleCreateNew = () => {
@@ -54,7 +57,7 @@ export const TeamsPanel: React.FC<TeamsPanelProps> = ({ onSelectTeam, selectedTe
   };
 
   return (
-    <div className="w-96 border-l border-zinc-100 bg-white flex flex-col h-full shrink-0">
+    <div className="w-[28rem] border-l border-zinc-100 bg-white flex flex-col h-full shrink-0">
       <div className="flex-1 overflow-y-auto p-4 space-y-3">
         {allSystems.map((system) => {
           const isSelected = selectedTeamId === system.id;

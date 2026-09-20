@@ -1,4 +1,6 @@
 import { AgentNode, AGENTIC_SETS } from '../../data/agents';
+import { RUFLO_AGENTS } from '../../data/rufloAgents';
+import { isLiteVideoModel } from '../llm/constants';
 import { useCoreStore } from '../../integration/store/coreStore';
 import { useTeamStore } from '../../integration/store/teamStore';
 
@@ -19,7 +21,7 @@ export class PromptBuilder {
     };
 
     const hiringRule = isLead
-      ? `\n7. HIRING: When the user names a role to add (e.g. "buxgalter oling"), or the board needs a skill nobody on the team has, call hire_agent. YOU decide what that role does: reason about its real duties, deliverables and limits, then write them into 'responsibilities' yourself. NEVER ask the user what the role does. Immediately after hiring, give the newcomer its first concrete task with propose_task so it starts working.`
+      ? `\n7. HIRING: When the user names a role or a skill is missing, call hire_agent. Prefer Ruflo catalog roles (${RUFLO_AGENTS.map((a) => a.id).join(', ')}). YOU write 'responsibilities'. NEVER ask the user what the role does. After hiring, give the newcomer a first task with propose_task.`
       : '';
 
     const tasks = useCoreStore.getState().tasks;
@@ -48,7 +50,7 @@ export class PromptBuilder {
     
     let modelLimitInfo = '';
     if (activeTeam?.outputType === 'video') {
-      if (activeTeam.outputModel?.includes('lite')) {
+      if (isLiteVideoModel(activeTeam.outputModel)) {
         modelLimitInfo = ` Note: The current model (${activeTeam.outputModel}) supports only 1 reference image for animation.`;
       } else {
         modelLimitInfo = ` Note: The current model (${activeTeam.outputModel}) supports up to 3 reference images for style and content guidance.`;
@@ -71,14 +73,27 @@ The generation model expects a SINGLE prompt to produce a SINGLE ${activeTeam?.o
       : '';
 
     const knowledge = useCoreStore.getState().sharedKnowledge;
-    const knowledgeBlock = knowledge.length > 0
-      ? `\nTEAM KNOWLEDGE BASE (${knowledge.length}):\n${knowledge.slice(-12).map(k =>
-          `* [${k.authorName}] ${k.topic}: ${k.insight}${k.tags.length ? ` #${k.tags.join(' #')}` : ''}`
-        ).join('\n')}`
+    const mine = knowledge.filter(
+      (k) => !k.assignedAgentIndexes?.length || k.assignedAgentIndexes.includes(agent.index),
+    );
+    const shared = knowledge.filter(
+      (k) => k.assignedAgentIndexes?.length && !k.assignedAgentIndexes.includes(agent.index),
+    );
+    const pick = [...mine.slice(-16), ...shared.slice(-6)];
+    const knowledgeBlock = pick.length > 0
+      ? `\nTEAM KNOWLEDGE BASE (${knowledge.length} total, showing ${pick.length} for you):\n${pick.map(k => {
+          const mineTag = k.assignedAgentIndexes?.includes(agent.index) ? ' [YOUR BRAIN]' : '';
+          return `* [${k.authorName}]${mineTag} ${k.topic}: ${k.insight}${k.tags.length ? ` #${k.tags.join(' #')}` : ''}`;
+        }).join('\n')}`
       : '\nTEAM KNOWLEDGE BASE: Empty. Use share_insight to publish durable findings for peers.';
 
+    const summary = useCoreStore.getState().agentSummaries[agent.index];
+    const summaryBlock = summary
+      ? `\nYOUR BRAIN SUMMARY:\n${summary.slice(0, 1500)}`
+      : '';
+
     return `ID: ${agent.name}. Role: ${agent.description}. Phase: ${phase}.
-${brief ? `Brief: ${brief}` : ''}${reviewContext}
+${brief ? `Brief: ${brief}` : ''}${reviewContext}${summaryBlock}
 Team: User (0), ${team}
 KANBAN:
 ${board}${knowledgeBlock}
@@ -89,6 +104,9 @@ RULES:
 4. NO META-TALK: Avoid "I have finished X", "Here is the result". Use the tool payload for content and Chat for conversation only.${outputInstruction}${imageInstruction}
 5. LANGUAGE: Default language is Uzbek (Oʻzbekcha). Generate all systemic outputs (tasks, complete_task results, deliver_project, chat) in Uzbek unless the user clearly writes in another language — then match that language.
 6. KNOWLEDGE: After meaningful research or decisions, call share_insight so other agents can reuse it. Prefer request_peer_review before high-risk delivery.${hiringRule}
+8. SOCIAL: Instagram tools (instagram_publish_photo/reel, instagram_insights) and Telegram tools (telegram_send_message/photo, telegram_get_chat) are available when the user connected tokens in Integratsiyalar. Photos/reels need public HTTPS URLs — not base64. Use set_agent_model when the user asks to switch an agent to OpenAI, Gemini, or Claude.
+9. MODELS: Each agent may have its own provider/model. Do not invent prefer_model — call set_agent_model instead.
+10. FILES: If the user attached files and asked to do the work, call return_file with the SAME extension/mime they sent. Do the requested edit/generation. Do not only describe — deliver the file.
 Goal: ${objectives[phase as keyof typeof objectives] || ''}`;
   }
 }

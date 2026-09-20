@@ -39,7 +39,7 @@ export class SceneManager {
   private lastAgentSetId: string | null = null;
   private lastRosterKey: string = '';
   private selectedIndex: number | null = null;
-  private coreHandler: ((npcIndex: number, text: string) => Promise<string | null>) | null = null;
+  private coreHandler: ((npcIndex: number, text: string, attachments?: any[]) => Promise<string | null>) | null = null;
 
   private unsubs: (() => void)[] = [];
   private isDisposed = false;
@@ -62,7 +62,7 @@ export class SceneManager {
     const activeSet = getActiveAgentSet();
     this.simulation = new AgentSimulation(activeSet);
     this.lastRosterKey = SceneManager.rosterKey(activeSet);
-    this.setCoreHandler((idx, text) => this.simulation!.handleUserMessage(idx, text));
+    this.setCoreHandler((idx, text, attachments) => this.simulation!.handleUserMessage(idx, text, attachments));
     
     this.init();
     this.startWatchingCoreStore();
@@ -154,7 +154,10 @@ export class SceneManager {
     if (this.isDisposed) return;
 
     const state = useUiStore.getState();
-    this.characterManager.setInstanceCount(state.instanceCount);
+    const liveSet = getActiveAgentSet();
+    const needed = Math.max(liveSet.user.index, ...getAllAgents(liveSet).map((a) => a.index)) + 1;
+    if (state.instanceCount !== needed) useUiStore.getState().setInstanceCount(needed);
+    this.characterManager.setInstanceCount(needed);
     this.controller = new CharacterController(this.characterManager, this.navMesh, this.poiManager);
     this.driverManager = new DriverManager(this.controller);
     
@@ -165,6 +168,7 @@ export class SceneManager {
     getAllAgents(activeSet).forEach((agent) => {
       if (agent.index !== playerIndex) this.driverManager!.registerNpc(agent.index, agent);
     });
+    this.stage.frameRoster(getAllAgents(activeSet).length + 1);
 
     new InputManager(
       this.engine.renderer.domElement, this.stage.camera,
@@ -191,6 +195,7 @@ export class SceneManager {
         if (this.controller) {
           this.controller.setColors();
           this.controller.warpAllToSpawn(set.user.index, getAllAgents(set).map(a => a.index));
+          this.stage.frameRoster(getAllAgents(set).length + 1);
         }
       }
       if ((s.isChatting !== prev.isChatting || s.isThinking !== prev.isThinking || s.isTyping !== prev.isTyping) && this.controller) {
@@ -265,15 +270,15 @@ export class SceneManager {
   }
 
 
-  public async sendMessage(text: string): Promise<void> {
+  public async sendMessage(text: string, attachments?: any[]): Promise<void> {
     const { selectedNpcIndex, isThinking } = useUiStore.getState();
     if (selectedNpcIndex === null || isThinking) return;
     useCoreStore.setState((s) => ({
-      agentHistories: { ...s.agentHistories, [selectedNpcIndex!]: [...(s.agentHistories[selectedNpcIndex!] || []), { role: 'user', content: text }] }
+      agentHistories: { ...s.agentHistories, [selectedNpcIndex!]: [...(s.agentHistories[selectedNpcIndex!] || []), { role: 'user', content: text, metadata: attachments?.length ? { attachments } : undefined }] }
     }));
     useUiStore.setState({ isThinking: true, isTyping: false });
     try {
-      if (this.coreHandler) await this.coreHandler(selectedNpcIndex!, text);
+      if (this.coreHandler) await this.coreHandler(selectedNpcIndex!, text, attachments);
       useUiStore.setState({ isThinking: false });
     } catch (err) {
       console.error('[SceneManager] sendMessage error:', err);
@@ -285,7 +290,7 @@ export class SceneManager {
     if (this.simulation) this.simulation.dispose();
     this.simulation = new AgentSimulation(activeSet);
     this.lastRosterKey = SceneManager.rosterKey(activeSet);
-    this.setCoreHandler((idx, text) => this.simulation!.handleUserMessage(idx, text));
+    this.setCoreHandler((idx, text, attachments) => this.simulation!.handleUserMessage(idx, text, attachments));
     if (this.driverManager) {
       const playerIndex = activeSet.user.index;
       this.driverManager.dispose();
@@ -295,7 +300,7 @@ export class SceneManager {
       });
     }
   }
-  public setCoreHandler(handler: ((npcIndex: number, text: string) => Promise<string | null>) | null): void {
+  public setCoreHandler(handler: ((npcIndex: number, text: string, attachments?: any[]) => Promise<string | null>) | null): void {
     this.coreHandler = handler;
   }
 

@@ -1,6 +1,6 @@
 import { FunctionDeclaration, GoogleGenAI, Tool, Type } from '@google/genai';
 import { LLMMessage, LLMProvider, LLMResponse, LLMToolCall, LLMToolDefinition } from '../types';
-import { DEFAULT_MODELS } from '../constants';
+import { DEFAULT_MODELS, isLiteVideoModel } from '../constants';
 import { calculateTokensForCost } from '../pricing';
 
 
@@ -212,7 +212,7 @@ export class GeminiProvider implements LLMProvider {
     } = {},
     images?: string[]
   ): Promise<{ videoUrl: string; usage?: any }> {
-    if (modelName.includes('lite')) {
+    if (isLiteVideoModel(modelName)) {
       return this.createVideoLite(prompt, modelName, onProgress, options, images);
     } else {
       return this.createVideo(prompt, modelName, onProgress, options, images);

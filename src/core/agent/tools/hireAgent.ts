@@ -3,6 +3,7 @@ import { useCoreStore } from '../../../integration/store/coreStore';
 import { useUiStore } from '../../../integration/store/uiStore';
 import { useTeamStore, getActiveAgentSet } from '../../../integration/store/teamStore';
 import { AgentNode, MAX_AGENTS, getAllAgents } from '../../../data/agents';
+import { findRufloAgent } from '../../../data/rufloAgents';
 import { DEFAULT_MODELS } from '../../llm/constants';
 
 /** Palette for newly hired agents, picked by slot so colours stay distinguishable. */
@@ -77,11 +78,12 @@ export function hireAgent(
   );
   const x = Number.isFinite(rightmost) ? rightmost + 200 : parentPos.x;
 
+  const catalog = findRufloAgent(role);
   const newAgent: AgentNode = {
-    id: `${slugify(role)}-${index}`,
+    id: catalog ? `${catalog.id}-${index}` : `${slugify(role)}-${index}`,
     index,
-    name: role.trim(),
-    description: responsibilities.trim(),
+    name: catalog?.name || role.trim(),
+    description: [catalog?.description, responsibilities.trim()].filter(Boolean).join(' — '),
     color: args.color?.match(/^#[0-9a-fA-F]{6}$/)
       ? args.color
       : HIRE_COLORS[(index - 1) % HIRE_COLORS.length],

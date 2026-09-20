@@ -8,6 +8,7 @@ import { CharacterManager } from './entities/CharacterManager';
 import { NavMeshManager } from './pathfinding/NavMeshManager';
 import { PathAgent } from './pathfinding/PathAgent';
 import { PoiManager } from './world/PoiManager';
+import { worldSlot } from '../data/rufloAgents';
 
 /**
  * CharacterController — unified API for controlling any character (player or NPC).
@@ -266,19 +267,13 @@ export class CharacterController implements ICharacterDriver {
     this.cancelMovement(playerIndex);
     npcIndices.forEach(i => this.cancelMovement(i));
 
-    // 3. Teleport player to world origin
-    this.characterManager.setPosition(playerIndex, new THREE.Vector3(0, 0, 0));
+    const total = npcIndices.length + 1;
+    this.characterManager.setPosition(playerIndex, new THREE.Vector3(0, 0, 2));
     this.play(playerIndex, 'idle');
 
-    // 4. Reassign spawn POIs in sorted order (same as initInstances)
-    const spawnPois = this.poiManager.getPoisByPrefix('spawn');
-    npcIndices.forEach((agentIndex, order) => {
-      const poi = spawnPois[order % spawnPois.length];
-      if (poi) {
-        this.characterManager.setPosition(agentIndex, poi.position);
-        this.characterManager.setOrientation(agentIndex, poi.quaternion);
-        this.poiManager.occupy(poi.id, agentIndex);
-      }
+    npcIndices.forEach((agentIndex) => {
+      const slot = worldSlot(agentIndex, total);
+      this.characterManager.setPosition(agentIndex, new THREE.Vector3(slot.x, 0, slot.z));
       this.play(agentIndex, 'idle');
     });
   }

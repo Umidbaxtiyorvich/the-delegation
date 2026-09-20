@@ -6,6 +6,18 @@ import { deliverProject } from './tools/deliverProject';
 import { shareInsight } from './tools/shareInsight';
 import { requestPeerReview } from './tools/requestPeerReview';
 import { hireAgent } from './tools/hireAgent';
+import { setAgentModel } from './tools/setAgentModel';
+import { returnFile } from './tools/returnFile';
+import {
+  instagramInsightsTool,
+  instagramPublishPhotoTool,
+  instagramPublishReelTool,
+} from './tools/instagramTools';
+import {
+  telegramGetChatTool,
+  telegramSendMessageTool,
+  telegramSendPhotoTool,
+} from './tools/telegramTools';
 
 export interface ToolCall {
   name: string;
@@ -22,31 +34,49 @@ export interface AgentActionContext {
   appendHistory: (message: LLMMessage) => void;
 }
 
+export type ToolResult = { ok: boolean; result: string };
+
 export class ToolRegistry {
   /**
    * Processes a tool call by dispatching it to the appropriate tool handler.
    */
-  public static process(agent: AgentActionContext, toolCall: ToolCall): boolean {
+  public static async process(agent: AgentActionContext, toolCall: ToolCall): Promise<ToolResult> {
     const { name, args } = toolCall;
 
     switch (name) {
       case 'set_user_brief':
-        return setUserBrief(agent, args);
+        return boolResult(setUserBrief(agent, args), name);
       case 'propose_task':
-        return proposeTask(agent, args);
+        return boolResult(proposeTask(agent, args), name);
       case 'complete_task':
-        return completeTask(agent, args);
+        return boolResult(completeTask(agent, args), name);
       case 'deliver_project':
-        return deliverProject(agent, args);
+        return boolResult(deliverProject(agent, args), name);
       case 'share_insight':
-        return shareInsight(agent, args);
+        return boolResult(shareInsight(agent, args), name);
       case 'request_peer_review':
-        return requestPeerReview(agent, args);
+        return boolResult(requestPeerReview(agent, args), name);
       case 'hire_agent':
-        return hireAgent(agent, args);
+        return boolResult(hireAgent(agent, args), name);
+      case 'set_agent_model':
+        return setAgentModel(agent, args);
+      case 'return_file':
+        return returnFile(agent, args);
+      case 'instagram_publish_photo':
+        return instagramPublishPhotoTool(agent, args);
+      case 'instagram_publish_reel':
+        return instagramPublishReelTool(agent, args);
+      case 'instagram_insights':
+        return instagramInsightsTool(agent, args);
+      case 'telegram_send_message':
+        return telegramSendMessageTool(agent, args);
+      case 'telegram_send_photo':
+        return telegramSendPhotoTool(agent, args);
+      case 'telegram_get_chat':
+        return telegramGetChatTool(agent, args);
       default:
         console.warn(`[ToolRegistry] Unknown tool: ${name}`);
-        return false;
+        return { ok: false, result: `FAILED: unknown tool ${name}` };
     }
   }
 
@@ -59,7 +89,7 @@ export class ToolRegistry {
     function: {
       name: 'hire_agent',
       description:
-        'Hire a new specialist agent into the team when a needed skill is missing. YOU must work out what the role does — do not ask the user. Write the responsibilities yourself, in detail.',
+        'Hire a specialist. Prefer a Ruflo catalog role (coder, tester, reviewer, architect, security-auditor, researcher, planner, github pr-manager, sparc-coder, ... 97 roles). YOU write responsibilities — do not ask the user.',
       parameters: {
         type: 'object',
         properties: {
@@ -79,10 +109,133 @@ export class ToolRegistry {
     }
   };
 
+  private static readonly SOCIAL_TOOLS = [
+    {
+      type: 'function',
+      function: {
+        name: 'instagram_publish_photo',
+        description:
+          'Publish a photo post to the connected Instagram business account. Requires a public https image_url (not base64).',
+        parameters: {
+          type: 'object',
+          properties: {
+            caption: { type: 'string', description: 'Post caption in Uzbek unless user asks otherwise' },
+            image_url: { type: 'string', description: 'Public HTTPS URL of the image' },
+          },
+          required: ['caption', 'image_url'],
+        },
+      },
+    },
+    {
+      type: 'function',
+      function: {
+        name: 'instagram_publish_reel',
+        description: 'Publish a Reel. Requires a public https video_url.',
+        parameters: {
+          type: 'object',
+          properties: {
+            caption: { type: 'string' },
+            video_url: { type: 'string', description: 'Public HTTPS URL of the video' },
+          },
+          required: ['caption', 'video_url'],
+        },
+      },
+    },
+    {
+      type: 'function',
+      function: {
+        name: 'instagram_insights',
+        description:
+          'Fetch recent Instagram media stats (reach/impressions/likes when available) and store a summary in knowledge.',
+        parameters: { type: 'object', properties: {} },
+      },
+    },
+    {
+      type: 'function',
+      function: {
+        name: 'telegram_send_message',
+        description: 'Send a text message via the connected Telegram bot to the default chat/channel (or chat_id).',
+        parameters: {
+          type: 'object',
+          properties: {
+            text: { type: 'string' },
+            chat_id: { type: 'string', description: 'Optional override; defaults to saved chat' },
+          },
+          required: ['text'],
+        },
+      },
+    },
+    {
+      type: 'function',
+      function: {
+        name: 'telegram_send_photo',
+        description: 'Send a photo via Telegram bot. photo_url must be a public HTTPS URL.',
+        parameters: {
+          type: 'object',
+          properties: {
+            photo_url: { type: 'string' },
+            caption: { type: 'string' },
+            chat_id: { type: 'string' },
+          },
+          required: ['photo_url'],
+        },
+      },
+    },
+    {
+      type: 'function',
+      function: {
+        name: 'telegram_get_chat',
+        description: 'Inspect the configured Telegram chat/channel metadata.',
+        parameters: {
+          type: 'object',
+          properties: {
+            chat_id: { type: 'string' },
+          },
+        },
+      },
+    },
+    {
+      type: 'function',
+      function: {
+        name: 'set_agent_model',
+        description:
+          'Change which LLM provider/model an agent uses (openai, gemini, or claude). Use when the user asks to switch models.',
+        parameters: {
+          type: 'object',
+          properties: {
+            agentId: { type: 'integer', description: 'Target agent index; defaults to self' },
+            provider: { type: 'string', enum: ['openai', 'gemini', 'claude'] },
+            model: { type: 'string', description: 'Model id e.g. gpt-4o-mini, gemini-2.0-flash, claude-sonnet-4-5' },
+          },
+          required: ['provider'],
+        },
+      },
+    },
+  ];
+
+  private static readonly RETURN_FILE_TOOL = {
+    type: 'function',
+    function: {
+      name: 'return_file',
+      description:
+        'Return a finished file to the user in the SAME format they sent (png→png, zip→zip, mp4→mp4, txt→txt). For images/videos you may pass a generation prompt as content (encoding=text). For code/text use encoding=text. For binary use encoding=base64.',
+      parameters: {
+        type: 'object',
+        properties: {
+          filename: { type: 'string', description: 'e.g. parrot-edit.png or project.zip' },
+          mime: { type: 'string', description: 'e.g. image/png, video/mp4, application/zip, text/plain' },
+          content: { type: 'string', description: 'File text, generation prompt, or base64' },
+          encoding: { type: 'string', enum: ['text', 'base64'] },
+        },
+        required: ['filename', 'mime', 'content'],
+      },
+    },
+  };
+
   public static getDefinitions(agentIndex: number, phase: string, subagentsCount: number = 0): any[] {
     const isLead = agentIndex === 1;
     const isManager = subagentsCount > 0;
-    const tools: any[] = [];
+    const tools: any[] = [ToolRegistry.RETURN_FILE_TOOL];
 
     // 1. Idle Phase: Only Lead can set the brief
     if (phase === 'idle') {
@@ -100,6 +253,7 @@ export class ToolRegistry {
           }
         });
         tools.push(ToolRegistry.HIRE_AGENT_TOOL);
+        tools.push(...ToolRegistry.SOCIAL_TOOLS);
       }
       return tools;
     }
@@ -182,6 +336,8 @@ export class ToolRegistry {
         },
       );
 
+      tools.push(...ToolRegistry.SOCIAL_TOOLS);
+
       if (isLead) {
         tools.push(ToolRegistry.HIRE_AGENT_TOOL);
         tools.push({
@@ -206,4 +362,8 @@ export class ToolRegistry {
 
     return tools;
   }
+}
+
+function boolResult(ok: boolean, name: string): ToolResult {
+  return { ok, result: ok ? `OK: ${name}` : `FAILED: ${name}` };
 }

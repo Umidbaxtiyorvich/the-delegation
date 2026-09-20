@@ -1,15 +1,16 @@
 import { USER_COLOR } from '../theme/brand';
 import { DEFAULT_MODELS } from '../core/llm/constants';
+import type { AvatarOverrides } from '../core/avatar/types';
+import { buildRufloSwarmTeam } from './rufloTeam';
 
 export const USER_ID = 'user';
 export const USER_NAME = 'User';
 /**
- * Raised from 5 → 12 so the Ikki Miya team (7 agents) still has room for the lead
- * to hire specialists at runtime via the hire_agent tool.
+ * Raised so Ikki Miya and Ruflo Swarm can hire more specialists at runtime.
  */
-export const MAX_AGENTS = 12;
+export const MAX_AGENTS = 160;
 export { USER_COLOR };
-export const DEFAULT_AGENTIC_SET_ID = 'ikki-miya';
+export const DEFAULT_AGENTIC_SET_ID = 'ruflo-swarm';
 export interface AgentNode {
   id: string;
   index: number;
@@ -17,9 +18,18 @@ export interface AgentNode {
   description: string;
   color: string;
   model: string;
+  /** Which LLM backend this agent uses. Inferred from model if omitted. */
+  provider?: 'openai' | 'gemini' | 'claude';
   humanInTheLoop?: boolean;
   position?: { x: number; y: number };
   subagents?: AgentNode[];
+  /**
+   * Visual layer only — see `src/core/avatar`. Both fields are optional: when
+   * absent the appearance is derived from `id`, so agents saved before the
+   * avatar system existed keep working and stay stable.
+   */
+  avatarSeed?: string;
+  avatar?: AvatarOverrides;
 }
 
 export type OutputType = 'text' | 'image' | 'music' | 'video';
@@ -61,6 +71,10 @@ export const AGENTIC_SETS: AgenticSystem[] = [
       color: '#7C3AED',
       model: DEFAULT_MODELS.text,
       humanInTheLoop: true,
+      // Genders are pinned across this roster to hold a 40–60% split. Per-agent
+      // seeds are independent, so on a team this small they cannot guarantee it.
+      // Everything else about the appearance is still derived from the id.
+      avatar: { gender: 'male' },
       position: { x: 0, y: 130 },
       subagents: [
         {
@@ -72,6 +86,7 @@ export const AGENTIC_SETS: AgenticSystem[] = [
           color: '#2563EB',
           model: DEFAULT_MODELS.text,
           humanInTheLoop: true,
+          avatar: { gender: 'female' },
           position: { x: -360, y: 280 },
           subagents: [
             {
@@ -82,6 +97,7 @@ export const AGENTIC_SETS: AgenticSystem[] = [
                 'Raqobatchilar, TAM/SAM, narx va mahalliy foydalanuvchi xulqini tadqiq qiladi. Natijani share_insight orqali ulashadi.',
               color: '#60A5FA',
               model: DEFAULT_MODELS.text,
+              avatar: { gender: 'male' },
               position: { x: -360, y: 430 }
             }
           ]
@@ -94,6 +110,7 @@ export const AGENTIC_SETS: AgenticSystem[] = [
             'Jalb qilish, ushlab qolish va go-to-market strategiyasini boshqaradi. Kontent va kanal testlarini muvofiqlashtiradi.',
           color: '#DB2777',
           model: DEFAULT_MODELS.text,
+          avatar: { gender: 'female' },
           position: { x: 0, y: 280 },
           subagents: [
             {
@@ -105,6 +122,7 @@ export const AGENTIC_SETS: AgenticSystem[] = [
               color: '#F472B6',
               model: DEFAULT_MODELS.text,
               humanInTheLoop: true,
+              avatar: { gender: 'female' },
               position: { x: 0, y: 430 }
             }
           ]
@@ -117,6 +135,7 @@ export const AGENTIC_SETS: AgenticSystem[] = [
             'Arxitektura, milestone va stackni belgilaydi. Topshirishdan oldin moliyadan peer review soʻraydi.',
           color: '#059669',
           model: DEFAULT_MODELS.text,
+          avatar: { gender: 'male' },
           position: { x: 360, y: 280 },
           subagents: [
             {
@@ -127,6 +146,7 @@ export const AGENTIC_SETS: AgenticSystem[] = [
                 'Unit economics, burn, narxlash va risklarni hisoblaydi. Texnik rejani xarajat jihatdan tekshiradi.',
               color: '#34D399',
               model: DEFAULT_MODELS.text,
+              avatar: { gender: 'female' },
               position: { x: 360, y: 430 }
             }
           ]
@@ -419,15 +439,14 @@ export const AGENTIC_SETS: AgenticSystem[] = [
         }
       ]
     }
-  }
+  },
+  buildRufloSwarmTeam(),
 ];
 
 export function getAgentSet(id: string, customSystems: AgenticSystem[] = []): AgenticSystem {
-  return (
-    customSystems.find((s) => s.id === id) ||
-    AGENTIC_SETS.find((s) => s.id === id) ||
-    AGENTIC_SETS[0]
-  );
+  const predefined = AGENTIC_SETS.find((s) => s.id === id);
+  if (predefined) return predefined;
+  return customSystems.find((s) => s.id === id) || AGENTIC_SETS[0];
 }
 
 export function getAllAgents(system: AgenticSystem): AgentNode[] {

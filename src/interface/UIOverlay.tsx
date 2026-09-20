@@ -258,6 +258,27 @@ const UIOverlay: React.FC = () => {
         return null;
       })()}
 
+      {npcAgents.map((agent) => {
+        const pos = npcScreenPositions[agent.index];
+        if (!pos) return null;
+        if (selectedNpcIndex === agent.index || hoveredNpcIndex === agent.index) return null;
+        return (
+          <div
+            key={`name-${agent.index}`}
+            className="absolute z-10 pointer-events-none"
+            style={{
+              left: pos.x,
+              top: pos.y,
+              transform: 'translate(-50%, 8px)',
+            }}
+          >
+            <div className="bg-darkDelegation/70 backdrop-blur-sm px-2 py-0.5 rounded-full border border-white/10 whitespace-nowrap">
+              <span className="text-[8px] font-black uppercase tracking-widest text-white/90">{agent.name}</span>
+            </div>
+          </div>
+        );
+      })}
+
       {/* POI Hover Bubble */}
       {hoveredPoiLabel && hoverPosition && (
         <div

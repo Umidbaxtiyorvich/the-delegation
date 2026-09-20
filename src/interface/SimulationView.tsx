@@ -9,6 +9,7 @@ import TeamFlowModal from './TeamFlowModal';
 import { AuditModal } from './AuditModal';
 import { TeamBadge } from './components/TeamBadge';
 import { TeamOutputBadge } from './components/TeamOutputBadge';
+import { AgentRoster } from './components/AgentRoster';
 
 interface SimulationViewProps {
   canvasRef: React.RefObject<HTMLDivElement>;
@@ -61,6 +62,7 @@ const SimulationView: React.FC<SimulationViewProps> = ({ canvasRef, isFullscreen
 
       <div ref={canvasRef} className="flex-1 min-h-0 relative overflow-hidden bg-black/5">
         <UIOverlay />
+        <AgentRoster />
         {isFullscreen && selectedNpcIndex !== null && (
           <div className="absolute top-4 right-4 bottom-4 w-96 z-50 pointer-events-none flex flex-col gap-4">
             <InspectorPanel isFloating />

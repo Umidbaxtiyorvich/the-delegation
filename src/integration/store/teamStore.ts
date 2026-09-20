@@ -1,7 +1,7 @@
 
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
-import { AgenticSystem, DEFAULT_AGENTIC_SET_ID, getAgentSet } from '../../data/agents';
+import { AGENTIC_SETS, AgenticSystem, DEFAULT_AGENTIC_SET_ID, getAgentSet, getAllAgents } from '../../data/agents';
 
 export type AgentSet = AgenticSystem;
 
@@ -62,6 +62,24 @@ export const useTeamStore = create<TeamState>()(
     {
       name: 'team-storage',
       storage: createJSONStorage(() => localStorage),
+      version: 3,
+      migrate: (persisted) => {
+        const raw = (persisted || {}) as Partial<TeamState>;
+        const predefinedIds = new Set(AGENTIC_SETS.map((s) => s.id));
+        return {
+          selectedAgentSetId: 'ruflo-swarm',
+          customSystems: (raw.customSystems || []).filter((s) => !predefinedIds.has(s.id)),
+        };
+      },
+      onRehydrateStorage: () => (state) => {
+        if (!state) return;
+        const system = getAgentSet(state.selectedAgentSetId, state.customSystems);
+        const roster = getAllAgents(system);
+        const needed = Math.max(system.user.index, ...roster.map((a) => a.index)) + 1;
+        void import('./uiStore').then(({ useUiStore }) => {
+          useUiStore.getState().setInstanceCount(needed);
+        });
+      },
     }
   )
 );

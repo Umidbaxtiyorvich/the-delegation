@@ -15,6 +15,7 @@ import SimulationView from './interface/SimulationView';
 import { VisualConfigurator } from './interface/VisualConfigurator/VisualConfigurator';
 import { SceneContext } from './simulation/SceneContext';
 import { SceneManager } from './simulation/SceneManager';
+import { AutoPostScheduler } from './interface/AutoPostScheduler';
 
 
 const App: React.FC = () => {
@@ -126,6 +127,7 @@ const App: React.FC = () => {
         {/* Final output — fixed viewport overlay */}
         <FinalOutputModal />
         <OutputReviewModal />
+        <AutoPostScheduler />
       </div>
     </SceneContext.Provider>
   );

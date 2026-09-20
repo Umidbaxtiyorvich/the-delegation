@@ -46,6 +46,8 @@ export interface SharedInsight {
   authorIndex: number
   authorName: string
   createdAt: number
+  /** Agents that should prioritize this knowledge in their "brain". */
+  assignedAgentIndexes?: number[]
 }
 
 export interface DebugLogEntryBase {
@@ -144,6 +146,7 @@ interface CoreState {
 
   // ── Actions — Shared knowledge ────────────────────────────────
   addSharedInsight: (entry: Omit<SharedInsight, 'id' | 'createdAt'>) => SharedInsight;
+  importSharedInsights: (entries: Omit<SharedInsight, 'id' | 'createdAt'>[]) => number;
   clearSharedKnowledge: () => void;
 
   // ── Actions — Log ─────────────────────────────────────────────
@@ -167,6 +170,9 @@ interface CoreState {
 
   // ── Simulation Sync ──────────────────────────────────────────
   setAgentHistory: (agentIndex: number, history: LLMMessage[]) => void;
+  /** Timestamp of last ChatGPT folder/zip import (persisted). */
+  chatImportAt: number | null;
+  markChatImported: () => void;
 }
 
 const uid = () => `${Date.now()}_${Math.random().toString(36).slice(2, 7)}`
@@ -196,6 +202,7 @@ export const useCoreStore = create<CoreState>()(
       agentHistories: {},
       agentSummaries: {},
       boardroomHistories: {},
+      chatImportAt: null,
       isKanbanOpen: true,
       isLogOpen: true,
       isFinalOutputOpen: false,
@@ -210,11 +217,10 @@ export const useCoreStore = create<CoreState>()(
         phase: 'idle',
         finalOutput: null,
         tasks: [],
-        sharedKnowledge: [],
+        // Keep imported team knowledge across "new project" / F5 — user asked once-import permanence.
+        // Use clearSharedKnowledge() to wipe brains explicitly.
         actionLog: [],
         debugLog: [],
-        agentHistories: {},
-        agentSummaries: {},
         boardroomHistories: {},
         isFinalOutputOpen: false,
         totalTokenUsage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
@@ -266,12 +272,32 @@ export const useCoreStore = create<CoreState>()(
           createdAt: Date.now(),
         };
         set((s) => ({
-          sharedKnowledge: [...s.sharedKnowledge, insight].slice(-40),
+          sharedKnowledge: [...s.sharedKnowledge, insight].slice(-400),
         }));
         return insight;
       },
 
-      clearSharedKnowledge: () => set({ sharedKnowledge: [] }),
+      importSharedInsights: (entries) => {
+        if (!entries.length) return 0;
+        const base = Date.now();
+        const insights: SharedInsight[] = entries.map((entry, i) => ({
+          ...entry,
+          id: `insight_${uid()}_${i}`,
+          createdAt: base + i,
+        }));
+        set((s) => {
+          const kept = s.sharedKnowledge.filter((k) => !k.tags?.includes('chatgpt'));
+          return {
+            sharedKnowledge: [...kept, ...insights].slice(-400),
+            chatImportAt: base,
+          };
+        });
+        return insights.length;
+      },
+
+      clearSharedKnowledge: () => set({ sharedKnowledge: [], chatImportAt: null }),
+
+      markChatImported: () => set({ chatImportAt: Date.now() }),
 
       removeTask: (taskId) =>
         set((s) => {
@@ -510,7 +536,15 @@ export const useCoreStore = create<CoreState>()(
     {
       name: 'core-storage',
       storage: createJSONStorage(() => localStorage),
-      partialize: (state) => ({}),
+      // Persist brains so one ChatGPT import survives F5.
+      partialize: (state) => ({
+        sharedKnowledge: state.sharedKnowledge,
+        agentHistories: state.agentHistories,
+        agentSummaries: state.agentSummaries,
+        userBrief: state.userBrief,
+        phase: state.phase,
+        chatImportAt: state.chatImportAt,
+      }),
     }
   )
 )

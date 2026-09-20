@@ -7,6 +7,7 @@ import { useUiStore } from '../integration/store/uiStore';
 import { getAllAgents } from '../data/agents';
 import { useActiveTeam } from '../integration/store/teamStore';
 import { Avatar } from './components/Avatar';
+import { AgentPortrait } from './components/AgentPortrait';
 import { InfoBubble } from './components/InfoBubble';
 import { USER_COLOR, USER_COLOR_LIGHT, USER_COLOR_SOFT } from '../theme/brand';
 import { uz } from '../i18n/uz';
@@ -63,11 +64,11 @@ export const AuditModal: React.FC<AuditModalProps> = ({ taskId, isOpen, onClose,
         <div className="px-8 py-8 flex items-center justify-between bg-white shrink-0">
           <div className="flex items-center gap-6">
             <div className="relative">
-              <Avatar
-                type={agent?.index === 0 ? 'user' : 'sub'}
-                color={agent?.color}
-                size={64}
-              />
+              {agent && agent.index !== 0 ? (
+                <AgentPortrait subject={agent} size={64} />
+              ) : (
+                <Avatar type="user" color={agent?.color} size={64} />
+              )}
               <div
                 className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full border-4 border-white flex items-center justify-center text-white"
                 style={{ backgroundColor: agent?.color || '#333' }}

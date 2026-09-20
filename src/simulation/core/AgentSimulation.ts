@@ -1,4 +1,5 @@
 import { AgentNode, AgenticSystem, getAllAgents } from '../../data/agents';
+import { pickAgentForJob, summarizeAttachments, type ChatAttachment } from '../../core/chat/attachments';
 import { useCoreStore } from '../../integration/store/coreStore';
 import { AgentHost } from './AgentHost';
 import { useUiStore } from '../../integration/store/uiStore';
@@ -232,10 +233,92 @@ export class AgentSimulation {
 
 
 
-  public async handleUserMessage(agentIndex: number, text: string) {
-    const agent = this.getAgent(agentIndex);
+  public async handleUserMessage(agentIndex: number, text: string, attachments?: ChatAttachment[]) {
+    const roster = getAllAgents(this.system);
+    let targetIndex = agentIndex;
+    const hasFiles = !!(attachments && attachments.length);
+
+    if (hasFiles) {
+      const pick = pickAgentForJob(roster, attachments, text);
+      const host = this.getAgent(pick.index);
+      if (host && host.canChat()) {
+        targetIndex = pick.index;
+      }
+    }
+
+    if (targetIndex !== agentIndex) {
+      const target = roster.find((a) => a.index === targetIndex);
+      useCoreStore.setState((s) => {
+        const note = {
+          role: 'assistant' as const,
+          content: `${target?.name || 'Mutaxassis'} ga yoʻnaltirildi — shu fayl ishini u qiladi.`,
+        };
+        const src = [...(s.agentHistories[agentIndex] || []), note];
+        let dest = [...(s.agentHistories[targetIndex] || [])];
+        const already = dest.some(
+          (m) => m.role === 'user' && m.content === text && m.metadata?.attachments === attachments,
+        );
+        if (!already) {
+          dest = [
+            ...dest,
+            {
+              role: 'user' as const,
+              content: `${text}\n\n${summarizeAttachments(attachments || [])}`.trim(),
+              metadata: { attachments },
+            },
+          ];
+        }
+        return {
+          agentHistories: {
+            ...s.agentHistories,
+            [agentIndex]: src,
+            [targetIndex]: dest,
+          },
+        };
+      });
+      useUiStore.getState().setSelectedNpc(targetIndex);
+      useUiStore.getState().setChatting(true);
+    } else if (hasFiles) {
+      useCoreStore.setState((s) => {
+        const hist = [...(s.agentHistories[targetIndex] || [])];
+        for (let i = hist.length - 1; i >= 0; i--) {
+          if (hist[i].role === 'user') {
+            hist[i] = {
+              ...hist[i],
+              content: `${hist[i].content}\n\n${summarizeAttachments(attachments || [])}`.trim(),
+              metadata: { ...hist[i].metadata, attachments },
+            };
+            break;
+          }
+        }
+        return { agentHistories: { ...s.agentHistories, [targetIndex]: hist } };
+      });
+    }
+
+    const fileInstruction = hasFiles
+      ? `${text}\n\n${summarizeAttachments(attachments)}\n\nFoydalanuvchi shu fayl(lar)ni shu izoh bilan qilishni soʻradi. Ishni bajar va return_file bilan XUDDI SHU formatda qaytar.`
+      : text;
+
+    if (hasFiles) {
+      useCoreStore.setState((s) => {
+        const hist = [...(s.agentHistories[targetIndex] || [])];
+        for (let i = hist.length - 1; i >= 0; i--) {
+          if (hist[i].role === 'user') {
+            hist[i] = {
+              ...hist[i],
+              content: fileInstruction,
+              metadata: { ...hist[i].metadata, attachments },
+            };
+            break;
+          }
+        }
+        return { agentHistories: { ...s.agentHistories, [targetIndex]: hist } };
+      });
+    }
+
+    const agent = this.getAgent(targetIndex);
     if (!agent || !agent.canChat()) return null;
-    const response = await agent.think(text, { isChat: true });
+    const response = await agent.think(fileInstruction, { isChat: true });
     return response.text;
   }
 

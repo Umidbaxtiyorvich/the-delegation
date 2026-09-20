@@ -3,11 +3,12 @@ import { Image as ImageIcon, Plus, X, UploadCloud } from 'lucide-react';
 import { useCoreStore } from '../../integration/store/coreStore';
 import { useActiveTeam } from '../../integration/store/teamStore';
 import { USER_COLOR } from '../../theme/brand';
+import { isLiteVideoModel } from '../../core/llm/constants';
 
 export const ReferenceImages: React.FC = () => {
   const { referenceImages, addReferenceImage, removeReferenceImage } = useCoreStore();
   const activeTeam = useActiveTeam();
-  const maxImages = (activeTeam.outputType === 'video' && activeTeam.outputModel === 'veo-3.1-lite-generate-preview') ? 1 : 3;
+  const maxImages = (activeTeam.outputType === 'video' && isLiteVideoModel(activeTeam.outputModel)) ? 1 : 3;
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isDragging, setIsDragging] = React.useState(false);
 

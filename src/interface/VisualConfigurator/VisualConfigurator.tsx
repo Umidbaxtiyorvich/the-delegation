@@ -97,7 +97,7 @@ const VisualConfiguratorContent: React.FC = () => {
   // Fit view on appearance or team change
   useEffect(() => {
     if (viewMode === 'design') {
-      const timer = setTimeout(() => fitView({ padding: 0.1, duration: 400 }), 100);
+      const timer = setTimeout(() => fitView({ padding: 0.25, duration: 400 }), 100);
       return () => clearTimeout(timer);
     }
   }, [viewMode, selectedTeamId, initialNodes, fitView]);
@@ -292,8 +292,8 @@ const VisualConfiguratorContent: React.FC = () => {
             nodesDraggable={configMode === 'edit'}
             elementsSelectable={true}
             zoomOnScroll={true}
-            maxZoom={1.5}
-            minZoom={0.5}
+            maxZoom={1.8}
+            minZoom={0.15}
           >
             <Background gap={24} color="#bbbbbb" size={2} />
             {configMode === 'edit' && selectedAgentId && selectedAgentId !== 'user' && (

@@ -1,15 +1,17 @@
-import { Cpu, Save, Target, Trash2, User, X, Check, Pipette, Zap, CircleUser } from 'lucide-react';
+import { Cpu, Save, Target, Trash2, User, X, Check, Pipette, Zap, CircleUser, Palette } from 'lucide-react';
 import React, { useState, useMemo, useEffect } from 'react';
 import { AgentNode, AgenticSystem, getAllCharacters } from '../../data/agents';
 import { USER_COLOR, USER_COLOR_LIGHT, USER_COLOR_SOFT } from '../../theme/brand';
 import { useCoreStore } from '../../integration/store/coreStore';
 import { useTeamStore } from '../../integration/store/teamStore';
 import { Avatar } from '../components/Avatar';
+import { AgentPortrait } from '../components/AgentPortrait';
+import { AvatarEditor } from './AvatarEditor';
 import { ColorPicker } from './ColorPicker';
 import { InfoBubble } from '../components/InfoBubble';
 import { getBrightness, MAX_BRIGHTNESS } from './colorUtils';
 import { uz } from '../../i18n/uz';
-import { DEFAULT_MODELS } from '../../core/llm/constants';
+import { DEFAULT_MODELS, PROVIDER_MODELS, inferProviderFromModel } from '../../core/llm/constants';
 
 interface AgentConfigPanelProps {
   agent: AgentNode;
@@ -118,7 +120,7 @@ export const AgentConfigPanel: React.FC<AgentConfigPanelProps> = ({
           {isUser ? (
             <Avatar type="user" color={USER_COLOR} size={32} />
           ) : (
-            <Avatar type={isLead ? 'lead' : 'sub'} color={editData.color} size={32} />
+            <AgentPortrait subject={editData} size={32} />
           )}
           <h3 className="font-bold text-sm text-darkDelegation uppercase tracking-tight truncate">
             {isUser ? 'User Info' : (isLead ? 'Lead Agent Info' : 'Subagent Info')}
@@ -182,6 +184,26 @@ export const AgentConfigPanel: React.FC<AgentConfigPanelProps> = ({
                 </div>
               ), 'Faqat harf, raqam va boʻsh joy ishlating. ID avtomatik yaratiladi.')}
 
+              {renderField('LLM provayder', <Cpu size={12} />, isView ? (
+                <div className="flex items-center gap-2 px-3 py-1.5 bg-zinc-100 border border-zinc-200 rounded-lg text-xs font-mono text-zinc-600 w-fit lowercase">
+                  {(editData as any).provider || inferProviderFromModel(editData.model || DEFAULT_MODELS.text)}
+                </div>
+              ) : (
+                <select
+                  value={(editData as any).provider || inferProviderFromModel(editData.model || DEFAULT_MODELS.text)}
+                  onChange={(e) => {
+                    const provider = e.target.value as 'openai' | 'gemini' | 'claude';
+                    const models = PROVIDER_MODELS[provider];
+                    updateDraft({ provider, model: models[0] } as any);
+                  }}
+                  className="w-full px-3 py-2 bg-zinc-50 border border-zinc-200 rounded-xl text-xs font-mono focus:outline-none focus:ring-2 focus:ring-black/5 cursor-pointer lowercase"
+                >
+                  <option value="openai">openai</option>
+                  <option value="gemini">gemini</option>
+                  <option value="claude">claude</option>
+                </select>
+              ), 'Agent qaysi API orqali ishlaydi.')}
+
               {renderField('LLM modeli', <Cpu size={12} />, isView ? (
                 <div className="flex items-center gap-2 px-3 py-1.5 bg-zinc-100 border border-zinc-200 rounded-lg text-xs font-mono text-zinc-600 w-fit lowercase">
                   {editData.model || DEFAULT_MODELS.text}
@@ -192,9 +214,17 @@ export const AgentConfigPanel: React.FC<AgentConfigPanelProps> = ({
                   onChange={(e) => updateDraft({ model: e.target.value })}
                   className="w-full px-3 py-2 bg-zinc-50 border border-zinc-200 rounded-xl text-xs font-mono focus:outline-none focus:ring-2 focus:ring-black/5 cursor-pointer lowercase"
                 >
-                  {availableModels.map(m => <option key={m} value={m} className="lowercase">{m}</option>)}
+                  {(PROVIDER_MODELS[(editData as any).provider || inferProviderFromModel(editData.model || DEFAULT_MODELS.text)] || availableModels).map(m => <option key={m} value={m} className="lowercase">{m}</option>)}
                 </select>
               ), uz.modelHint)}
+
+              {renderField("Tashqi ko'rinish", <Palette size={12} />, (
+                <AvatarEditor
+                  agent={editData}
+                  readOnly={isView}
+                  onChange={(changes) => updateDraft(changes)}
+                />
+              ), "Ko'rinish agent ID'sidan avtomatik yaratiladi. Qo'lda tanlaganingiz saqlanadi, qolgani urug'dan kelib chiqadi.")}
             </div>
 
             {/* Content Group */}

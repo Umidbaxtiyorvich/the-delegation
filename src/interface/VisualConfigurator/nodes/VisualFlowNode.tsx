@@ -3,6 +3,7 @@ import { User } from 'lucide-react';
 import { HandleData } from '../flowUtils';
 import { USER_COLOR, USER_COLOR_LIGHT, USER_COLOR_SOFT } from '../../../theme/brand';
 import { Avatar } from '../../components/Avatar';
+import { AgentPortrait } from '../../components/AgentPortrait';
 
 const NodeHandle = ({ h, i, total, position }: { h: HandleData, i: number, total: number, position: 'top' | 'bottom' }) => (
   <Handle
@@ -43,11 +44,11 @@ export const VisualFlowNode = ({ data, selected, type }: any) => {
 
       <div className="flex items-center gap-3">
         <div className="shrink-0 p-0.5 rounded-xl bg-zinc-50 border border-zinc-100/50">
-          <Avatar
-            type={isUser ? "user" : (data.isLead ? "lead" : "sub")}
-            color={isUser ? USER_COLOR : data.color}
-            size={48}
-          />
+          {isUser || !data.agent ? (
+            <Avatar type="user" color={USER_COLOR} size={48} />
+          ) : (
+            <AgentPortrait subject={data.agent} size={48} />
+          )}
         </div>
 
         <div className="flex flex-col min-w-0 flex-1 gap-1">

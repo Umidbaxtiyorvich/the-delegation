@@ -1,7 +1,8 @@
 import { Edit2, Pipette, Trash2, Users, X } from 'lucide-react';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { AgenticSystem, DEFAULT_AGENTIC_SET_ID, getAllAgents, OutputType } from '../../data/agents';
-import { DEFAULT_MODELS, AVAILABLE_MODELS, ModelType } from '../../core/llm/constants';
+import { DEFAULT_MODELS, generationModelsFor, ModelType } from '../../core/llm/constants';
+import { useUiStore } from '../../integration/store/uiStore';
 import { USER_COLOR } from '../../theme/brand';
 import { uz } from '../../i18n/uz';
 import { useTeamStore } from '../../integration/store/teamStore';
@@ -32,6 +33,7 @@ export const TeamCard: React.FC<TeamCardProps> = ({
 }) => {
   const { setActiveTeam, updateSystem, deleteCustomSystem, selectedAgentSetId } = useTeamStore();
   const scene = useSceneManager();
+  const llmConfig = useUiStore((s) => s.llmConfig);
   const colorInputRef = useRef<HTMLInputElement>(null);
 
   const [localEditData, setLocalEditData] = useState<Partial<AgenticSystem>>({});
@@ -50,7 +52,12 @@ export const TeamCard: React.FC<TeamCardProps> = ({
         teamDescription: system.teamDescription || 'A custom agentic team.',
         color: system.color || '#A855F7',
         outputType: system.outputType || 'text',
-        outputModel: system.outputModel || DEFAULT_MODELS.text,
+        outputModel: (() => {
+          const type = (system.outputType || 'text') as ModelType;
+          const models = generationModelsFor(type, llmConfig.keys);
+          const saved = system.outputModel || DEFAULT_MODELS[type] || DEFAULT_MODELS.text;
+          return models.includes(saved) ? saved : (models[0] || saved);
+        })(),
         outputAutoApprove: system.outputAutoApprove !== undefined ? system.outputAutoApprove : (system.outputType === 'text')
       });
       setErrorMsg(null);
@@ -287,7 +294,10 @@ export const TeamCard: React.FC<TeamCardProps> = ({
                     onChange={(e) => setLocalEditData(prev => ({ ...prev, outputModel: e.target.value }))}
                     className="w-full bg-white border border-zinc-100 text-[10px] font-bold rounded-xl px-2.5 py-1.5 outline-none cursor-pointer lowercase"
                   >
-                    {(AVAILABLE_MODELS[localEditData.outputType as ModelType] || []).map(model => (
+                    {generationModelsFor(
+                      (localEditData.outputType || 'text') as ModelType,
+                      llmConfig.keys,
+                    ).map(model => (
                       <option key={model} value={model}>{model}</option>
                     ))}
                   </select>

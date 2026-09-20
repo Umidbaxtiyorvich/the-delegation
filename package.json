@@ -12,16 +12,21 @@
   "type": "module",
   "scripts": {
     "dev": "vite --port=3000 --host",
+    "proxy": "node server/proxy.mjs",
     "build": "vite build",
     "preview": "vite preview",
     "clean": "rm -rf dist",
-    "lint": "tsc --noEmit"
+    "lint": "tsc --noEmit",
+    "check:avatars": "esbuild scripts/check-avatars.ts --bundle --platform=node --format=esm --outfile=scripts/.check-avatars.mjs --log-level=warning && node scripts/.check-avatars.mjs",
+    "check:portraits": "node scripts/check-portraits.mjs",
+    "check:scene": "node scripts/check-scene.mjs"
   },
   "dependencies": {
     "@google/genai": "1.48.0",
     "@tailwindcss/vite": "^4.1.14",
     "@vitejs/plugin-react": "^5.0.4",
     "@xyflow/react": "^12.10.1",
+    "fflate": "^0.8.3",
     "lucide-react": "^0.546.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",

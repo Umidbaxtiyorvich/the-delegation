@@ -9,6 +9,7 @@ import { useTeamStore, useActiveTeam } from '../integration/store/teamStore';
 import { useUiStore } from '../integration/store/uiStore';
 import { useSceneManager } from '../simulation/SceneContext';
 import { Avatar } from './components/Avatar';
+import { AgentPortrait } from './components/AgentPortrait';
 import AgentStatusPanel from './AgentStatusPanel';
 import ChatPanel from './ChatPanel';
 import ProjectView from './ProjectView';
@@ -58,7 +59,7 @@ const InspectorPanel: React.FC<InspectorPanelProps> = ({ isFloating }) => {
   };
 
   return (
-    <div className={`${isFloating ? 'w-full h-full max-h-[85vh] self-end rounded-2xl shadow-2xl border border-white/20' : 'w-80 h-full border-l border-zinc-100'} bg-white flex flex-col pointer-events-auto shrink-0 relative z-30 overflow-hidden transition-all duration-300`}>
+    <div className={`${isFloating ? 'w-full h-full max-h-[85vh] self-end rounded-2xl shadow-2xl border border-white/20' : 'w-[26rem] h-full border-l border-zinc-100'} bg-white flex flex-col pointer-events-auto shrink-0 relative z-30 overflow-hidden transition-all duration-300`}>
       {!agent ? (
         !isFloating && <ProjectView />
       ) : (
@@ -69,11 +70,11 @@ const InspectorPanel: React.FC<InspectorPanelProps> = ({ isFloating }) => {
               {/* Agent Title Row */}
               <div className="flex items-center gap-4">
                 <div className="shrink-0 rounded-2xl p-0.5 bg-zinc-50 border border-zinc-100/50">
-                  <Avatar
-                    type={agent.index === system.user.index ? 'user' : (agent.index === system.leadAgent.index ? 'lead' : 'sub')}
-                    color={agent.color}
-                    size={48}
-                  />
+                  {agent.index === system.user.index ? (
+                    <Avatar type="user" color={agent.color} size={48} />
+                  ) : (
+                    <AgentPortrait subject={agent} size={48} />
+                  )}
                 </div>
                 <div className="flex flex-col min-w-0">
                   <h2 className="text-xl font-black text-darkDelegation leading-tight truncate">

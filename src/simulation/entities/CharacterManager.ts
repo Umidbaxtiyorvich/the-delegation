@@ -2,19 +2,45 @@
 import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import {
+  abs,
   atan,
-  attribute, cos, float, Fn, If, instanceIndex, mat3,
-  mat4, positionLocal, sin, storage, texture, uint, uniform, uv, vec3,
-  vec4
+  attribute, cos, float, Fn, fract, If, instanceIndex, mat3,
+  mat4, mix, positionGeometry, positionLocal, sin, smoothstep, storage, texture, uint, uniform, uv,
+  varying, vec3, vec4
 } from 'three/tsl';
 import * as THREE from 'three/webgpu';
+import { generateAvatar } from '../../core/avatar/generateAvatar';
 import { getAllAgents, getAllCharacters } from '../../data/agents';
+import { worldSlot } from '../../data/rufloAgents';
+import { APPEARANCE_STRIDE, AvatarAppearanceBuffer } from './AvatarAppearanceBuffer';
 import { getActiveAgentSet } from '../../integration/store/teamStore';
 import { AgentBehavior, AnimationName, ExpressionKey } from '../../types';
 import { AgentStateBuffer } from '../behavior/AgentStateBuffer';
 import { ExpressionBuffer } from '../behavior/ExpressionBuffer';
 import { DRACO_LIB_PATH } from '../constants';
 import { PoiManager } from '../world/PoiManager';
+
+/**
+ * Vertical bands of the shared character mesh, measured from the GLB accessor
+ * bounds (body spans Y 0.005–1.255; the mouth starts at 0.635 and the cap sits
+ * from 0.997 up). They let the shader tell skin from clothing without any
+ * per-region material, which this model does not have.
+ */
+const NECK_BOTTOM_Y = 0.58;
+const NECK_TOP_Y = 0.66;
+const CAP_BOTTOM_Y = 0.997;
+const CAP_HEIGHT = 0.318;
+
+/**
+ * Hairline geometry. The face sits low on this head — the mouth spans Y
+ * 0.635–0.806 and the eyes 0.741–0.993 — while the skull continues up to 1.255,
+ * so the forehead is the band just above the eyes.
+ */
+const HAIRLINE_Y = 1.02;
+const CROWN_Y = 1.12;
+/** Lowest point hair reaches: just above the eyes for short cuts, nape for long. */
+const HAIR_FLOOR_SHORT = 1.0;
+const HAIR_FLOOR_LONG = 0.64;
 
 export class CharacterManager {
   private instanceCount = getAllAgents(getActiveAgentSet()).length + 1;
@@ -25,6 +51,9 @@ export class CharacterManager {
   private velAttribute: THREE.StorageInstancedBufferAttribute | null = null;
   private colorAttribute: THREE.InstancedBufferAttribute | null = null;
   private accessoryAttribute: THREE.InstancedBufferAttribute | null = null;
+
+  // Per-agent appearance, derived from the avatar config (see src/core/avatar).
+  private appearanceBuffer: AvatarAppearanceBuffer | null = null;
   private positionStorage: any;
   private velocityStorage: any;
 
@@ -200,6 +229,7 @@ export class CharacterManager {
     this.instancedMeshes = [];
     this.computeNode = null;
     this.expressionBuffer = null;
+    this.appearanceBuffer = null;
   }
 
   private initInstances() {
@@ -209,58 +239,52 @@ export class CharacterManager {
     const velArray = new Float32Array(this.instanceCount * 4);
     const colorArray = new Float32Array(this.instanceCount * 3);
     const accessoryArray = new Float32Array(this.instanceCount);
+    this.appearanceBuffer = new AvatarAppearanceBuffer(this.instanceCount);
 
     const tempColor = new THREE.Color();
-    const spawnRadius = 8; // Default spawn area
-
-    const spawnPois = this.poiManager?.getFreePoisByPrefix('spawn') || [];
-    let spawnIndex = 0;
-
     const agentsBuffer = []; // Temporary to store POIs for orientation
 
     const system = getActiveAgentSet();
     const allCharacters = getAllCharacters(system);
+    const totalSlots = Math.max(this.instanceCount, allCharacters.length);
 
     for (let i = 0; i < this.instanceCount; i++) {
       const agentNode = allCharacters.find(a => a.index === i) || system.leadAgent;
       const colorOverride = agentNode.color;
       tempColor.set(colorOverride);
 
-      if (i === system.user.index) {
-        // Player spawns at (0,0,0)
-        posArray[i * 4 + 0] = 0;
-        posArray[i * 4 + 2] = 0;
-        agentsBuffer[i] = null;
-      } else {
-        const poi = spawnPois[spawnIndex % spawnPois.length];
-        if (poi) {
-          this.poiManager?.occupy(poi.id, i);
-          posArray[i * 4 + 0] = poi.position.x;
-          posArray[i * 4 + 2] = poi.position.z;
-          spawnIndex++;
-          agentsBuffer[i] = poi;
-        } else {
-          posArray[i * 4 + 0] = (Math.random() - 0.5) * spawnRadius * 2;
-          posArray[i * 4 + 2] = (Math.random() - 0.5) * spawnRadius * 2;
-          agentsBuffer[i] = null;
-        }
-        posArray[i * 4 + 3] = 1;
-        velArray[i * 4 + 0] = (Math.random() - 0.5) * 0.1;
-        velArray[i * 4 + 2] = (Math.random() - 0.5) * 0.1;
+      const slot = worldSlot(i, totalSlots);
+      posArray[i * 4 + 0] = slot.x;
+      posArray[i * 4 + 1] = 0;
+      posArray[i * 4 + 2] = slot.z;
+      posArray[i * 4 + 3] = 1;
+      agentsBuffer[i] = null;
+      if (i !== system.user.index) {
+        velArray[i * 4 + 0] = (Math.random() - 0.5) * 0.05;
+        velArray[i * 4 + 2] = (Math.random() - 0.5) * 0.05;
       }
 
       colorArray[i * 3 + 0] = tempColor.r;
       colorArray[i * 3 + 1] = tempColor.g;
       colorArray[i * 3 + 2] = tempColor.b;
 
-      // Accessory logic: 0=None, 1=Headphones, 2=Cap
-      if (i === system.user.index) {
-        accessoryArray[i] = 0;
-      } else if (i === system.leadAgent.index) {
-        accessoryArray[i] = 1;
-      } else {
-        accessoryArray[i] = 2;
-      }
+      // Appearance is a pure function of the agent's id, so every reload draws
+      // the same person and newly hired agents get their own look for free.
+      const avatar = generateAvatar({
+        id: agentNode.id,
+        name: agentNode.name,
+        description: agentNode.description,
+        color: agentNode.color,
+        avatarSeed: agentNode.avatarSeed,
+        avatar: agentNode.avatar,
+      });
+
+      this.appearanceBuffer.set(i, avatar);
+
+      // Accessory slot: 0=None, 1=Headphones, 2=Doppi (the GLB's 'cap' mesh).
+      // The doppi rides the head bone like the cap did, so it stays seated
+      // correctly through every animation.
+      accessoryArray[i] = avatar.wearsDoppi ? 2 : 0;
     }
 
 
@@ -270,7 +294,6 @@ export class CharacterManager {
     this.velAttribute = new THREE.StorageInstancedBufferAttribute(velArray, 4);
     this.colorAttribute = new THREE.InstancedBufferAttribute(colorArray, 3);
     this.accessoryAttribute = new THREE.InstancedBufferAttribute(accessoryArray, 1);
-
     this.positionStorage = storage(this.posAttribute, 'vec4', this.instanceCount);
     this.velocityStorage = storage(this.velAttribute, 'vec4', this.instanceCount);
 
@@ -360,13 +383,30 @@ export class CharacterManager {
       // Solo dejamos el atributo que NO se calcula en el Compute Shader
       instancedGeometry.setAttribute('instanceColor', this.colorAttribute);
       if (this.accessoryAttribute) instancedGeometry.setAttribute('accessoryType', this.accessoryAttribute);
-
       const material = new THREE.MeshStandardNodeMaterial();
       material.roughness = 1;
       material.metalness = 0.25;
 
       const instanceColor = attribute('instanceColor', 'vec3');
       const map = (baseMaterial as any).map;
+
+      // Appearance rides a storage buffer (4 vec4 per instance) because the
+      // pipeline is already at 7 of WebGPU's 8 vertex buffers.
+      const appearance = this.appearanceBuffer!.storageNode;
+      const base = instanceIndex.mul(APPEARANCE_STRIDE);
+      const skinSlot = appearance.element(base);
+      const clothSlot = appearance.element(base.add(1));
+      const accentSlot = appearance.element(base.add(2));
+      const doppiSlot = appearance.element(base.add(3));
+      const hairSlot = appearance.element(base.add(4));
+
+      const skinColor = skinSlot.xyz;
+      const clothColor = clothSlot.xyz;
+      const accentColor = accentSlot.xyz;
+      const doppiColor = doppiSlot.xyz;
+      const hairColor = hairSlot.xyz;
+      const fabricType = skinSlot.w;
+      const hairCoverage = hairSlot.w;
 
       const expressionData = this.expressionBuffer!.storageNode.element(instanceIndex);
       const animParams = this.agentStateBuffer!.storageNode.element(instanceIndex.mul(2).add(1));
@@ -384,10 +424,8 @@ export class CharacterManager {
         material.uvNode = uv().add(expressionData.zw);
       }
 
-      // Solo coloreamos el mesh cuyo nombre sea 'body' o accesorios
       material.transparent = true;
 
-      const isAccessory = isHeadphones || isCap;
       const isBody = name.toLowerCase().includes('body');
 
       if (isHeadphones) {
@@ -396,18 +434,91 @@ export class CharacterManager {
         material.opacityNode = accessoryType.equal(float(2)).select(instanceAlpha, float(0));
       }
 
-      if (isBody || isAccessory) {
+      if (isBody) {
         material.depthWrite = true;
         material.depthTest = true;
+        // The body is skin and fabric, never metal. The stock 0.25 metalness
+        // gave every agent a waxy sheen.
+        material.metalness = 0;
+        material.roughness = 0.9;
 
-        const baseAlpha = isAccessory ? material.opacityNode : (map ? texture(map).a.mul(instanceAlpha) : instanceAlpha);
+        // Rest-pose position straight off the geometry. `positionLocal` is not
+        // usable here: assigning `material.positionNode` replaces it with the
+        // final world-space position, which made every region mask depend on
+        // where the agent stood in the office.
+        const local = varying(positionGeometry);
 
-        if (map) {
-          const texColor = texture(map);
-          material.colorNode = vec4(texColor.rgb.mul(instanceColor), baseAlpha);
-        } else {
-          material.colorNode = vec4(instanceColor, baseAlpha);
-        }
+        // This model has a single untextured body mesh, so skin and clothing are
+        // separated by height: head above the collar, garment below.
+        const skinMask = smoothstep(float(NECK_BOTTOM_Y), float(NECK_TOP_Y), local.y);
+
+        // Khan-atlas: broad wavy ikat bands, blurred at the edges the way
+        // resist-dyed silk bleeds. Frequencies are deliberately low — the
+        // agents are small on screen, and fine detail just turns to noise.
+        const atlasWave = sin(local.y.mul(14).add(sin(local.x.mul(7)).mul(1.3)));
+        const atlas = mix(clothColor, accentColor, smoothstep(float(0.1), float(0.6), atlasWave).mul(0.9));
+
+        // Adras: narrow vertical stripes.
+        const stripe = fract(local.x.mul(5));
+        const stripeMask = smoothstep(float(0.32), float(0.44), stripe)
+          .sub(smoothstep(float(0.56), float(0.68), stripe))
+          .clamp(0, 1);
+        const adras = mix(clothColor, accentColor, stripeMask.mul(0.8));
+
+        // Ornament: a diamond motif on a grid.
+        const cellX = fract(local.x.mul(6)).sub(0.5);
+        const cellY = fract(local.y.mul(6)).sub(0.5);
+        const diamond = smoothstep(float(0.32), float(0.18), abs(cellX).add(abs(cellY)));
+        const ornament = mix(clothColor, accentColor, diamond.mul(0.7));
+
+        const fabricColor = fabricType
+          .equal(float(1))
+          .select(
+            atlas,
+            fabricType
+              .equal(float(2))
+              .select(adras, fabricType.equal(float(3)).select(ornament, clothColor))
+          );
+
+        const bodyColor = mix(fabricColor, skinColor, skinMask);
+
+        // Hair, painted onto the scalp because the mesh has no hair geometry.
+        // Restricted to the head volume (|x| small) so it never bleeds onto the
+        // arms, and kept off the face (+Z) so it cannot cover the eyes.
+        const onHead = smoothstep(float(0.33), float(0.26), abs(local.x));
+        const crown = smoothstep(float(HAIRLINE_Y), float(CROWN_Y), local.y);
+        const notFace = smoothstep(float(0.16), float(0.02), local.z);
+        // Long styles reach further down the back; a buzz cut stops at the crown.
+        const hairFloor = mix(float(HAIR_FLOOR_SHORT), float(HAIR_FLOOR_LONG), hairCoverage);
+        const belowCrown = smoothstep(hairFloor, hairFloor.add(0.06), local.y);
+        const hairMask = crown.max(notFace.mul(belowCrown)).mul(onHead).clamp(0, 1);
+
+        material.colorNode = vec4(mix(bodyColor, hairColor, hairMask), instanceAlpha);
+      } else if (isCap) {
+        material.depthWrite = true;
+        material.depthTest = true;
+        material.metalness = 0;
+        material.roughness = 0.75;
+
+        const local = varying(positionGeometry);
+        const capT = local.y.sub(float(CAP_BOTTOM_Y)).div(float(CAP_HEIGHT)).clamp(0, 1);
+
+        // A real doppi is embroidered, not plain: a zigzag thread around the
+        // brim plus a ring of almond motifs above it (Chust pattern).
+        const brim = smoothstep(float(0.26), float(0.2), capT);
+        const brimThread = brim.mul(smoothstep(float(0.16), float(0.3), abs(fract(uv().x.mul(16)).sub(0.5))));
+
+        const motifRing = smoothstep(float(0.3), float(0.38), capT)
+          .sub(smoothstep(float(0.52), float(0.6), capT))
+          .clamp(0, 1);
+        const motif = motifRing.mul(smoothstep(float(0.3), float(0.42), abs(fract(uv().x.mul(4)).sub(0.5))));
+
+        const thread = brimThread.add(motif).clamp(0, 1);
+        material.colorNode = vec4(mix(doppiColor, accentColor, thread), material.opacityNode);
+      } else if (isHeadphones) {
+        material.depthWrite = true;
+        material.depthTest = true;
+        material.colorNode = vec4(instanceColor, material.opacityNode);
       } else {
         // Eyes / mouth: rendered on top of the body surface with polygon offset to avoid
         // z-fighting, but still respect the depth buffer so they are occluded by walls etc.
@@ -518,8 +629,16 @@ export class CharacterManager {
         finalPosition.assign(skinMat.mul(vec4(positionLocal, 1.0)).xyz);
       }
 
+      // Per-agent build. Applied after skinning and to every mesh alike, so the
+      // doppi keeps sitting on the head instead of floating or sinking.
+      const appearance = this.appearanceBuffer!.storageNode;
+      const slot = instanceIndex.mul(APPEARANCE_STRIDE);
+      const heightScale = appearance.element(slot.add(1)).w;
+      const widthScale = appearance.element(slot.add(2)).w;
+      const scaled = finalPosition.mul(vec3(widthScale, heightScale, widthScale));
+
       const vertexScale = isVisibleNode.select(float(1), float(0));
-      return rotationMat.mul(finalPosition.mul(vertexScale)).add(instancePos);
+      return rotationMat.mul(scaled.mul(vertexScale)).add(instancePos);
     })();
   }
 

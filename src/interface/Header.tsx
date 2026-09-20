@@ -1,21 +1,32 @@
-import { Brain, Info, KeyRound, Maximize2, Settings } from 'lucide-react';
+import { Brain, Info, KeyRound, Link2, Maximize2, Settings, Share2 } from 'lucide-react';
 import React, { useState } from 'react';
 import packageJson from '../../package.json';
 import { useCoreStore } from '../integration/store/coreStore';
 import { useUiStore } from '../integration/store/uiStore';
+import { useIntegrationsStore } from '../integration/store/integrationsStore';
 import { uz } from '../i18n/uz';
 import BYOKModal from './BYOKModal';
 import InfoModal from './InfoModal';
 import KnowledgePanel from './KnowledgePanel';
+import IntegrationsModal from './IntegrationsModal';
+import SocialPanel from './SocialPanel';
 
 const version = packageJson.version;
 
 const Header: React.FC = () => {
   const { llmConfig, isBYOKOpen, setBYOKOpen } = useUiStore();
   const { setViewMode, sharedKnowledge } = useCoreStore();
+  const igConnected = !!useIntegrationsStore((s) => s.instagram.accessToken);
   const [isInfoOpen, setIsInfoOpen] = useState(false);
   const [isKnowledgeOpen, setIsKnowledgeOpen] = useState(false);
-  const hasKey = !!llmConfig.apiKey;
+  const [isIntegrationsOpen, setIsIntegrationsOpen] = useState(false);
+  const [isSocialOpen, setIsSocialOpen] = useState(false);
+  const hasKey = !!(
+    llmConfig.keys?.openai ||
+    llmConfig.keys?.gemini ||
+    llmConfig.keys?.claude ||
+    llmConfig.apiKey
+  );
 
   const handleFullscreen = () => {
     if (!document.fullscreenElement) {
@@ -64,7 +75,7 @@ const Header: React.FC = () => {
               className="text-zinc-300 hover:text-darkDelegation transition-colors shrink-0"
               title={uz.viewOnGithub}
             >
-              <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"></path></svg>
+              <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor"><path d="8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"></path></svg>
             </a>
           </div>
         </div>
@@ -72,6 +83,27 @@ const Header: React.FC = () => {
 
       {/* Right: Global Controls */}
       <div className="flex items-center gap-3">
+
+        <button
+          onClick={() => setIsSocialOpen(true)}
+          className="relative flex items-center gap-2 px-3 py-1 bg-sky-50 hover:bg-sky-100 text-sky-700 rounded-lg transition-all border border-sky-100 cursor-pointer h-9 shrink-0"
+          title={uz.social}
+        >
+          <Share2 size={14} />
+          <span className="text-[10px] font-black uppercase tracking-wider hidden sm:inline">{uz.social}</span>
+        </button>
+
+        <button
+          onClick={() => setIsIntegrationsOpen(true)}
+          className="relative flex items-center gap-2 px-3 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-lg transition-all border border-emerald-100 cursor-pointer h-9 shrink-0"
+          title={uz.integrations}
+        >
+          <Link2 size={14} />
+          <span className="text-[10px] font-black uppercase tracking-wider hidden md:inline">{uz.integrations}</span>
+          {igConnected && (
+            <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-emerald-500" />
+          )}
+        </button>
 
         <button
           onClick={() => setIsKnowledgeOpen(true)}
@@ -125,6 +157,14 @@ const Header: React.FC = () => {
 
       {isKnowledgeOpen && (
         <KnowledgePanel key="knowledge-panel" onClose={() => setIsKnowledgeOpen(false)} />
+      )}
+
+      {isIntegrationsOpen && (
+        <IntegrationsModal key="integrations-modal" onClose={() => setIsIntegrationsOpen(false)} />
+      )}
+
+      {isSocialOpen && (
+        <SocialPanel key="social-panel" onClose={() => setIsSocialOpen(false)} />
       )}
 
       {isBYOKOpen && (

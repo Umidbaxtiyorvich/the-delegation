@@ -3,32 +3,35 @@ import { getAllAgents } from '../../data/agents';
 import { AgentState, CharacterState } from '../../types';
 import { useTeamStore, getActiveAgentSet } from './teamStore';
 import { DEFAULT_MODELS, DEFAULT_OPENAI_BASE_URL } from '../../core/llm/constants';
+import { normalizeLlmConfig } from '../../core/llm/providers/createProvider';
+import type { LLMConfig } from '../../core/llm/types';
 
-function loadLlmConfig() {
+function loadLlmConfig(): LLMConfig {
   try {
     const saved = localStorage.getItem('byok-config');
     if (saved) {
       const parsed = JSON.parse(saved);
-      if (parsed?.apiKey) {
-        return {
+      if (parsed?.apiKey || parsed?.keys?.openai || parsed?.keys?.gemini || parsed?.keys?.claude) {
+        return normalizeLlmConfig({
           ...parsed,
-          provider: 'openai' as const,
           baseUrl: parsed.baseUrl || (process.env.OPENAI_BASE_URL as string) || DEFAULT_OPENAI_BASE_URL,
           model: parsed.model || (process.env.OPENAI_MODEL as string) || DEFAULT_MODELS.text,
           embedModel: parsed.embedModel || (process.env.OPENAI_EMBED_MODEL as string) || DEFAULT_MODELS.embed,
-        };
+        });
       }
     }
   } catch { /* ignore */ }
 
   const envKey = (process.env.OPENAI_API_KEY as string) || '';
-  return {
+  const geminiEnv = (process.env.GEMINI_API_KEY as string) || '';
+  return normalizeLlmConfig({
     apiKey: envKey,
+    keys: { openai: envKey, gemini: geminiEnv, claude: '' },
     baseUrl: (process.env.OPENAI_BASE_URL as string) || DEFAULT_OPENAI_BASE_URL,
     model: (process.env.OPENAI_MODEL as string) || DEFAULT_MODELS.text,
     embedModel: (process.env.OPENAI_EMBED_MODEL as string) || DEFAULT_MODELS.embed,
-    provider: 'openai' as const,
-  };
+    provider: 'openai',
+  });
 }
 
 export const useUiStore = create<CharacterState>()(
@@ -84,7 +87,9 @@ export const useUiStore = create<CharacterState>()(
       hoverPosition: pos,
       hoveredNpcIndex: null,
     }),
-    setLlmConfig: (config) => set((s) => ({ llmConfig: { ...s.llmConfig, ...config } })),
+    setLlmConfig: (config) => set((s) => ({
+      llmConfig: normalizeLlmConfig({ ...s.llmConfig, ...config, keys: { ...s.llmConfig.keys, ...config.keys } }),
+    })),
     setChatting: (isChatting: boolean) => set((s) => ({
       isChatting,
       isTyping: isChatting ? s.isTyping : false,
@@ -97,6 +102,8 @@ export const useUiStore = create<CharacterState>()(
 useTeamStore.subscribe((state, prevState) => {
   if (state.selectedAgentSetId !== prevState.selectedAgentSetId) {
     const system = getActiveAgentSet();
-    useUiStore.getState().setInstanceCount(getAllAgents(system).length + 1);
+    const roster = getAllAgents(system);
+    const needed = Math.max(system.user.index, ...roster.map((a) => a.index)) + 1;
+    useUiStore.getState().setInstanceCount(needed);
   }
 });

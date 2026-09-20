@@ -14,20 +14,20 @@ export class Stage {
     this.scene = new THREE.Scene();
     this.scene.background = new THREE.Color(SCENE_BACKGROUND_COLOR);
 
-    this.camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 500);
-    this.camera.position.set(10, 8, 15);
+    this.camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 800);
+    this.camera.position.set(12, 10, 16);
 
     this.controls = new OrbitControls(this.camera, rendererElement);
     this.controls.enableDamping = true;
     this.controls.dampingFactor = 0.05;
     this.controls.rotateSpeed = 0.8;
     this.controls.enableRotate = true;
-    this.controls.enablePan = false;
+    this.controls.enablePan = true;
     this.controls.enableZoom = true;
-    this.controls.minPolarAngle = Math.PI / 4.5;
-    this.controls.maxPolarAngle = Math.PI / 2.4;
-    this.controls.minDistance = 3;
-    this.controls.maxDistance = 10;
+    this.controls.minPolarAngle = Math.PI / 6;
+    this.controls.maxPolarAngle = Math.PI / 2.2;
+    this.controls.minDistance = 4;
+    this.controls.maxDistance = 90;
     this.controls.target.set(0, 0.8, 0);
 
     this.controls.addEventListener('start', () => {
@@ -51,15 +51,25 @@ export class Stage {
     dirLight.castShadow = true;
     dirLight.shadow.camera.near = 0.1;
     dirLight.shadow.camera.far = 100;
-    dirLight.shadow.camera.top = 10;
-    dirLight.shadow.camera.bottom = -10;
-    dirLight.shadow.camera.right = 10;
-    dirLight.shadow.camera.left = -10;
+    dirLight.shadow.camera.top = 40;
+    dirLight.shadow.camera.bottom = -40;
+    dirLight.shadow.camera.right = 40;
+    dirLight.shadow.camera.left = -40;
     dirLight.shadow.mapSize.set(2048, 2048);
     dirLight.shadow.bias = -0.0001;
     dirLight.shadow.radius = 2;
     dirLight.shadow.autoUpdate = true;
     this.scene.add(dirLight);
+  }
+
+  /** Pull the camera back so every agent in the spiral stays in frame. */
+  public frameRoster(agentCount: number) {
+    const radius = Math.max(10, Math.sqrt(Math.max(4, agentCount)) * 2.1);
+    this.camera.position.set(radius * 0.85, Math.max(8, radius * 0.7), radius * 1.05);
+    this.controls.target.set(0, 0.8, 0);
+    this.controls.minDistance = 4;
+    this.controls.maxDistance = Math.max(50, radius * 3.5);
+    this.controls.update();
   }
 
   public onResize(width: number, height: number) {
@@ -100,13 +110,13 @@ export class Stage {
         // Arrived — re-enable controls, stay slightly zoomed
         this.controls.enabled = true;
         this.controls.minDistance = THREE.MathUtils.lerp(this.controls.minDistance, 3, 0.05);
-        this.controls.maxDistance = THREE.MathUtils.lerp(this.controls.maxDistance, 10, 0.05);
+        this.controls.maxDistance = THREE.MathUtils.lerp(this.controls.maxDistance, 24, 0.05);
       }
     } else {
       // Free roam
       this.controls.enabled = true;
       this.controls.minDistance = THREE.MathUtils.lerp(this.controls.minDistance, 3, 0.05);
-      this.controls.maxDistance = THREE.MathUtils.lerp(this.controls.maxDistance, 50, 0.05);
+      this.controls.maxDistance = THREE.MathUtils.lerp(this.controls.maxDistance, 90, 0.05);
     }
   }
 }

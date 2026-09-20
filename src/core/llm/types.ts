@@ -1,13 +1,17 @@
+export type LLMProviderId = 'openai' | 'gemini' | 'claude';
+
 export type LLMRole = 'system' | 'user' | 'assistant' | 'tool';
 
 export interface LLMMessage {
   role: LLMRole;
   content: string;
-  name?: string; // Required for tool responses in some APIs
+  name?: string;
   tool_calls?: LLMToolCall[];
-  images?: string[]; // Optional base64 images
+  images?: string[];
   metadata?: {
     internal?: boolean;
+    attachments?: any[];
+    returnedFile?: { filename: string; mime: string; dataUrl: string };
     [key: string]: any;
   };
 }
@@ -17,7 +21,7 @@ export interface LLMToolCall {
   type: 'function';
   function: {
     name: string;
-    arguments: string; // JSON string
+    arguments: string;
   };
 }
 
@@ -26,16 +30,24 @@ export interface LLMToolDefinition {
   function: {
     name: string;
     description: string;
-    parameters: any; // JSON Schema
+    parameters: any;
   };
 }
 
+export interface LLMProviderKeys {
+  openai?: string;
+  gemini?: string;
+  claude?: string;
+}
+
 export interface LLMConfig {
+  /** @deprecated prefer keys.openai — kept for backward compatibility */
   apiKey?: string;
   baseUrl?: string;
   model: string;
-  provider?: 'openai' | 'gemini';
+  provider?: LLMProviderId;
   embedModel?: string;
+  keys?: LLMProviderKeys;
 }
 
 export interface LLMRequestDetails {
@@ -55,7 +67,7 @@ export interface LLMResponse {
   tool_calls?: LLMToolCall[];
   usage?: LLMTokenUsage;
   finishReason?: string;
-  raw?: any; // The original provider response
+  raw?: any;
   request?: LLMRequestDetails;
 }
 

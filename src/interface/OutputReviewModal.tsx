@@ -17,7 +17,8 @@ import {
   Volume2,
   AlertCircle
 } from 'lucide-react'
-import { AVAILABLE_MODELS } from '../core/llm/constants'
+import { DEFAULT_MODELS, generationModelsFor, inferProviderFromModel, ModelType } from '../core/llm/constants'
+import { useUiStore } from '../integration/store/uiStore'
 import { InfoBubble } from './components/InfoBubble'
 import { uz } from '../i18n/uz'
 
@@ -33,6 +34,7 @@ export function OutputReviewModal() {
 
   const activeTeam = useActiveTeam()
   const scene = useSceneManager()
+  const llmConfig = useUiStore((s) => s.llmConfig)
   const [prompt, setPrompt] = useState(pendingOutputPrompt)
   const [params, setParams] = useState(pendingOutputParams)
   const [isConfirmingReset, setIsConfirmingReset] = useState(false)
@@ -41,10 +43,18 @@ export function OutputReviewModal() {
   useEffect(() => {
     if (isReviewingOutput) {
       setPrompt(pendingOutputPrompt)
-      setParams(pendingOutputParams)
+      const next = { ...pendingOutputParams }
+      const selected = next.model || activeTeam.outputModel
+      if (
+        (activeTeam.outputType === 'video' || activeTeam.outputType === 'music') &&
+        inferProviderFromModel(selected) !== 'gemini'
+      ) {
+        next.model = DEFAULT_MODELS[activeTeam.outputType]
+      }
+      setParams(next)
       setIsConfirmingReset(false)
     }
-  }, [isReviewingOutput, pendingOutputPrompt, pendingOutputParams])
+  }, [isReviewingOutput, pendingOutputPrompt, pendingOutputParams, activeTeam.outputModel, activeTeam.outputType])
 
   if (!isReviewingOutput) return null
 
@@ -146,8 +156,13 @@ export function OutputReviewModal() {
   )
 
   const renderModelControl = () => {
-    const type = activeTeam.outputType === 'music' ? 'music' : (activeTeam.outputType as keyof typeof AVAILABLE_MODELS);
-    const models = AVAILABLE_MODELS[type] || [];
+    const type = (activeTeam.outputType === 'music' ? 'music' : activeTeam.outputType) as ModelType
+    const keys = llmConfig.keys || { openai: llmConfig.apiKey || '', gemini: '', claude: '' }
+    let models = generationModelsFor(type, keys)
+    const current = params.model || activeTeam.outputModel
+    if (current && !models.includes(current)) {
+      models = [current, ...models]
+    }
 
     return (
       <div className="space-y-2">

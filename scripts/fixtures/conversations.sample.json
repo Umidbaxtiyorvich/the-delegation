@@ -1,0 +1,80 @@
+[
+  {
+    "id": "conv-demo-1",
+    "title": "Ikki Miya startup plan",
+    "create_time": 1700000000,
+    "update_time": 1700001000,
+    "mapping": {
+      "root": {
+        "id": "root",
+        "parent": null,
+        "children": ["m1"],
+        "message": null
+      },
+      "m1": {
+        "id": "m1",
+        "parent": "root",
+        "children": ["m2"],
+        "message": {
+          "author": { "role": "user" },
+          "create_time": 1700000001,
+          "content": { "content_type": "text", "parts": ["Bizga AI agent ofis kerak. Delegation asosida qilaylik."] }
+        }
+      },
+      "m2": {
+        "id": "m2",
+        "parent": "m1",
+        "children": ["m3"],
+        "message": {
+          "author": { "role": "assistant" },
+          "create_time": 1700000002,
+          "content": { "content_type": "text", "parts": ["Yaxshi. CEO, Product, Tech jamoasini tuzamiz."] }
+        }
+      },
+      "m3": {
+        "id": "m3",
+        "parent": "m2",
+        "children": [],
+        "message": {
+          "author": { "role": "user" },
+          "create_time": 1700000003,
+          "content": { "content_type": "text", "parts": ["ChatGPT tarixini bilim bazasiga import qilish kerak."] }
+        }
+      }
+    }
+  },
+  {
+    "id": "conv-demo-2",
+    "title": "Marketing ideas",
+    "create_time": 1700002000,
+    "update_time": 1700003000,
+    "mapping": {
+      "root": {
+        "id": "root",
+        "parent": null,
+        "children": ["a1"],
+        "message": null
+      },
+      "a1": {
+        "id": "a1",
+        "parent": "root",
+        "children": ["a2"],
+        "message": {
+          "author": { "role": "user" },
+          "create_time": 1700002001,
+          "content": { "content_type": "text", "parts": ["Instagram uchun 3 ta post g'oya ber."] }
+        }
+      },
+      "a2": {
+        "id": "a2",
+        "parent": "a1",
+        "children": [],
+        "message": {
+          "author": { "role": "assistant" },
+          "create_time": 1700002002,
+          "content": { "content_type": "text", "parts": ["1) Behind the scenes 2) Product demo 3) Customer story"] }
+        }
+      }
+    }
+  }
+]
